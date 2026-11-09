@@ -1,3 +1,16 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 .DS_Store
+Thumbs.db
+
+# 权限诊断工具产物（不属于作业，首次提交时误带入，已从版本库移除）
+_acl-recovery/
+acl-backup-*.json
+acl-backup-*.json.ps1
+acl-report-*.jsonl
+
+# 临时渲染/截图目录
+_render/
+
+# 旧项目重复副本（正式内容以 自选作品/ 为准）
+schoolwork-Ailab/

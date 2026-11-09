@@ -1,0 +1,252 @@
+/* 食谱搭配 —— 简洁白蓝风格 */
+
+:root {
+  --蓝-主: #2b6cb0;
+  --蓝-深: #1e4e8c;
+  --蓝-浅: #e8f1fb;
+  --蓝-边框: #d5e3f3;
+  --白: #ffffff;
+  --底: #f6f9fd;
+  --文字: #1f2d3d;
+  --文字-淡: #64748b;
+  --绿: #2f9e6f;
+  --红: #d64545;
+  --圆角: 12px;
+  --阴影: 0 1px 3px rgba(43, 108, 176, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--底);
+  color: var(--文字);
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+h1, h2 { margin: 0; font-weight: 600; }
+
+/* ---------- 顶栏 ---------- */
+.顶栏 {
+  background: var(--蓝-主);
+  color: var(--白);
+  padding: 28px 24px 24px;
+  text-align: center;
+}
+.顶栏 h1 { font-size: 26px; letter-spacing: 2px; }
+.副标题 { margin: 6px 0 0; font-size: 14px; opacity: 0.85; }
+
+/* ---------- 布局 ---------- */
+.容器 {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 16px;
+}
+
+.卡片 {
+  background: var(--白);
+  border: 1px solid var(--蓝-边框);
+  border-radius: var(--圆角);
+  box-shadow: var(--阴影);
+  padding: 20px 22px;
+}
+.卡片 h2 {
+  font-size: 16px;
+  color: var(--蓝-深);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--蓝-浅);
+}
+
+/* ---------- 表单 ---------- */
+.表单网格 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.表单网格 label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--文字-淡);
+}
+input, select {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--蓝-边框);
+  border-radius: 8px;
+  background: var(--白);
+  color: var(--文字);
+  outline: none;
+}
+input:focus, select:focus {
+  border-color: var(--蓝-主);
+  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.12);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  border: none;
+  transition: background 0.15s;
+}
+.主按钮 {
+  padding: 10px 18px;
+  background: var(--蓝-主);
+  color: var(--白);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.主按钮:hover { background: var(--蓝-深); }
+.次按钮 {
+  padding: 8px 16px;
+  background: var(--蓝-浅);
+  color: var(--蓝-深);
+  margin-top: 12px;
+}
+.次按钮:hover { background: #dbe9fa; }
+
+/* ---------- 目标结果 ---------- */
+.目标结果 {
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: var(--蓝-浅);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.目标结果 .标签 { font-size: 13px; color: var(--文字-淡); width: 100%; }
+.目标结果 strong {
+  font-size: 30px;
+  color: var(--蓝-深);
+  font-variant-numeric: tabular-nums;
+}
+.目标结果 .单位 { color: var(--文字-淡); font-size: 14px; }
+.提示 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--文字-淡);
+}
+.目标结果 .提示 { width: 100%; }
+
+/* ---------- 进度 ---------- */
+.进度条 {
+  height: 10px;
+  background: var(--蓝-浅);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.进度填充 {
+  height: 100%;
+  width: 0;
+  background: var(--蓝-主);
+  border-radius: 999px;
+  transition: width 0.3s, background 0.3s;
+}
+.进度填充.超出 { background: var(--红); }
+
+.营养概览 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+.营养项 {
+  background: var(--底);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.营养项 span { font-size: 12px; color: var(--文字-淡); }
+.营养项 b {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  color: var(--蓝-深);
+}
+.营养项 small { font-size: 11px; color: var(--文字-淡); }
+
+/* ---------- 食谱列表 ---------- */
+.食谱列表 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.食谱项 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--蓝-边框);
+  border-radius: 10px;
+  background: var(--白);
+}
+.食谱项:hover { border-color: var(--蓝-主); }
+
+.菜名 { flex: 1; min-width: 0; }
+.菜名 .名字 { font-weight: 600; }
+.人群标签 {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 8px;
+  margin-right: 4px;
+  border-radius: 999px;
+  background: var(--蓝-浅);
+  color: var(--蓝-深);
+}
+.营养明细 {
+  font-size: 12px;
+  color: var(--文字-淡);
+  font-variant-numeric: tabular-nums;
+}
+
+.热量 {
+  text-align: right;
+  min-width: 74px;
+  font-variant-numeric: tabular-nums;
+}
+.热量 b { font-size: 17px; color: var(--蓝-深); }
+.热量 small { font-size: 11px; color: var(--文字-淡); }
+
+.加入按钮 {
+  padding: 7px 14px;
+  background: var(--蓝-浅);
+  color: var(--蓝-深);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.加入按钮:hover { background: var(--蓝-主); color: var(--白); }
+.移除按钮 {
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--红);
+  border: 1px solid #f0caca;
+  font-size: 13px;
+}
+.移除按钮:hover { background: #fdf0f0; }
+
+/* ---------- 页脚 ---------- */
+.页脚 {
+  text-align: center;
+  font-size: 12px;
+  color: var(--文字-淡);
+  padding: 0 16px 32px;
+}
+.页脚 p { margin: 0; }
+
+@media (max-width: 560px) {
+  .食谱项 { flex-wrap: wrap; }
+  .热量 { min-width: 0; text-align: left; }
+}
