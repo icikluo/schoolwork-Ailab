@@ -362,6 +362,17 @@
   }
 
   function 初始化() {
+    // 自检：数据文件缺失时给出明确提示，避免页面"看起来正常但完全不可用"。
+    // 见 作业/A1/A1-运行证据.md 实验 C。
+    if (typeof window.食谱数据 === "undefined") {
+      var 提示 = document.createElement("p");
+      提示.style.cssText = "padding:48px 24px;text-align:center;font-size:16px;color:#d64545";
+      提示.textContent = "数据文件未加载，请确认 数据/食谱.js 存在。";
+      document.body.innerHTML = "";
+      document.body.appendChild(提示);
+      return;
+    }
+
     var 目标 = 读目标();
     回填目标表单(目标);
 
