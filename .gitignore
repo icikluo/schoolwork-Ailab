@@ -19,5 +19,16 @@ schoolwork-Ailab/
 commit_msg.txt
 m.txt
 msg.txt
+m2.txt
+m3.txt
 _check_refs.py
 _rename.py
+_*.py
+_*.jpg
+_*.png
+
+# A1 运行证据实验用的临时副本（原件在 自选作品/）
+实验-缺文件/
+_v2/
+_v3/
+_v4/
