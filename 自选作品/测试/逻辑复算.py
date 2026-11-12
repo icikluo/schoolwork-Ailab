@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品-web")
+根 = Path(r"D:\lab\自选作品")
 数据 = json.loads((根 / "数据" / "foods.json").read_text(encoding="utf-8"))
 
 通过 = 0

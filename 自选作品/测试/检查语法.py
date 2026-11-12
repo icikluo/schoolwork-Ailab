@@ -3,7 +3,7 @@ import re
 import sys
 from pathlib import Path
 
-s = Path(r"D:\lab\自选作品-web\脚本.js").read_text(encoding="utf-8")
+s = Path(r"D:\lab\自选作品\脚本.js").read_text(encoding="utf-8")
 
 t = re.sub(r"//[^\n]*", "", s)
 t = re.sub(r"'(?:[^'\\]|\\.)*'", "''", t)

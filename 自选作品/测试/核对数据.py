@@ -4,7 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品-web")
+根 = Path(r"D:\lab\自选作品")
 
 # ---- 1. 读数据，校验字段契约 ----
 数据 = json.loads((根 / "数据" / "foods.json").read_text(encoding="utf-8"))
