@@ -14,3 +14,10 @@ _render/
 
 # 旧项目重复副本（正式内容以 自选作品/ 为准）
 schoolwork-Ailab/
+
+# 临时文件：git 提交信息草稿、一次性脚本
+commit_msg.txt
+m.txt
+msg.txt
+_check_refs.py
+_rename.py
