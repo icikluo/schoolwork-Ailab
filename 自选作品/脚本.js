@@ -305,7 +305,12 @@
   function 创建占位图(菜名) {
     var 占位 = document.createElement("div");
     占位.className = "占位";
-    占位.textContent = 菜名;
+    // 占位块只显示 🍽 图标，菜名已在卡片标题显示，避免重复
+    var 图标 = document.createElement("span");
+    图标.textContent = "🍽";
+    图标.style.cssText = "font-size:28px;opacity:0.55";
+    占位.appendChild(图标);
+    占位.setAttribute("aria-label", 菜名 + " 暂无图片");
     return 占位;
   }
 
@@ -647,6 +652,9 @@
 
     显示目标结果(结果);
     刷新所有();
+    // 目标变了，计划区需要刷新：解锁「生成计划」按钮并更新提示。
+    // 否则设置目标后按钮仍处于 disabled 状态，用户点不动。
+    渲染计划();
   }
 
   function 显示目标结果(结果) {
