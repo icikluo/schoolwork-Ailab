@@ -220,11 +220,322 @@
     });
   }
 
-  function 渲染全部() {
-    var 全部 = window.食谱数据.slice().sort(function (a, b) {
+  // ============ 食谱专区：按人群分区 ============
+  var 当前分区 = "全部";
+
+  function 分区列表() {
+    var 分区 = ["全部"].concat(Object.keys(人群系数));
+    return 分区.map(function (名称) {
+      var 数量 = 名称 === "全部"
+        ? window.食谱数据.length
+        : window.食谱数据.filter(function (菜) {
+            return 菜.人群.indexOf(名称) !== -1;
+          }).length;
+      return { 名称: 名称, 数量: 数量 };
+    });
+  }
+
+  // 创建带图片位的食谱卡（图片暂缺时用占位块，见 PRD 功能进度表）
+  function 创建食谱卡(菜) {
+    var 卡 = document.createElement("div");
+    卡.className = "食谱卡";
+
+    var 图区 = document.createElement("div");
+    图区.className = "食谱图";
+    if (菜.图片) {
+      var img = document.createElement("img");
+      img.src = 菜.图片;
+      img.alt = 菜.名称;
+      img.loading = "lazy";
+      img.addEventListener("error", function () {
+        图区.innerHTML = "";
+        图区.appendChild(创建占位图(菜.名称));
+      });
+      图区.appendChild(img);
+    } else {
+      图区.appendChild(创建占位图(菜.名称));
+    }
+    卡.appendChild(图区);
+
+    var 内容 = document.createElement("div");
+    内容.className = "食谱卡内容";
+
+    var 名字 = document.createElement("div");
+    名字.className = "名字";
+    名字.textContent = 菜.名称;
+    内容.appendChild(名字);
+
+    var 标签行 = document.createElement("div");
+    菜.人群.forEach(function (人群名) {
+      var 标签 = document.createElement("span");
+      标签.className = "人群标签";
+      标签.textContent = 人群名;
+      标签行.appendChild(标签);
+    });
+    内容.appendChild(标签行);
+
+    var 明细 = document.createElement("div");
+    明细.className = "营养明细";
+    明细.textContent = "碳水 " + 菜.碳水.toFixed(1) + "g · 脂肪 " + 菜.脂肪.toFixed(1) +
+      "g · 膳食纤维 " + 菜.膳食纤维.toFixed(1) + "g · 蛋白质 " + 菜.蛋白质.toFixed(1) + "g";
+    内容.appendChild(明细);
+
+    var 底部 = document.createElement("div");
+    底部.className = "食谱卡底部";
+
+    var 热量盒 = document.createElement("div");
+    热量盒.className = "热量";
+    热量盒.innerHTML = "<b>" + 菜.卡路里 + "</b> <small>kcal</small>";
+    底部.appendChild(热量盒);
+
+    var 按钮 = document.createElement("button");
+    按钮.type = "button";
+    按钮.className = "加入按钮";
+    按钮.textContent = "记录";
+    按钮.addEventListener("click", function () {
+      添加记录(菜);
+    });
+    底部.appendChild(按钮);
+
+    内容.appendChild(底部);
+    卡.appendChild(内容);
+    return 卡;
+  }
+
+  function 创建占位图(菜名) {
+    var 占位 = document.createElement("div");
+    占位.className = "占位";
+    占位.textContent = 菜名;
+    return 占位;
+  }
+
+  function 渲染专区() {
+    var 导航 = 取元素("分区导航");
+    导航.innerHTML = "";
+
+    分区列表().forEach(function (项) {
+      var 按钮 = document.createElement("button");
+      按钮.type = "button";
+      按钮.className = "分区按钮" + (项.名称 === 当前分区 ? " 选中" : "");
+      按钮.setAttribute("role", "tab");
+      按钮.setAttribute("aria-selected", 项.名称 === 当前分区 ? "true" : "false");
+      按钮.innerHTML = 项.名称 + '<span class="计数">' + 项.数量 + "</span>";
+      按钮.addEventListener("click", function () {
+        当前分区 = 项.名称;
+        渲染专区();
+      });
+      导航.appendChild(按钮);
+    });
+
+    var 内容 = 取元素("分区内容");
+    内容.innerHTML = "";
+
+    var 待显示 = 当前分区 === "全部"
+      ? window.食谱数据.slice()
+      : window.食谱数据.filter(function (菜) {
+          return 菜.人群.indexOf(当前分区) !== -1;
+        });
+    待显示.sort(function (a, b) {
       return a.id.localeCompare(b.id);
     });
-    渲染列表("全部列表", 全部, "加入");
+
+    if (待显示.length === 0) {
+      var 空 = document.createElement("p");
+      空.className = "空分区";
+      空.textContent = "这个分类下暂时还没有食谱。";
+      内容.appendChild(空);
+      return;
+    }
+
+    var 网格 = document.createElement("div");
+    网格.className = "食谱网格";
+    待显示.forEach(function (菜) {
+      网格.appendChild(创建食谱卡(菜));
+    });
+    内容.appendChild(网格);
+  }
+
+  // ============ 一周食谱计划（只做 7 天） ============
+  var 计划存储键 = "食谱搭配-一周计划";
+  var 计划天数 = 7;          // 固定 7 天；不做 30 天，见 PRD 三不原则第 3 条
+  var 每日餐次 = ["早", "午", "晚"];
+
+  function 读计划() {
+    try {
+      var 原文 = localStorage.getItem(计划存储键);
+      return 原文 ? JSON.parse(原文) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function 写计划(计划) {
+    if (计划 === null) {
+      localStorage.removeItem(计划存储键);
+    } else {
+      localStorage.setItem(计划存储键, JSON.stringify(计划));
+    }
+  }
+
+  // 生成 7 天计划：逐日扣减额度，同一周内不重复推荐
+  // 两条硬约束：
+  //   1) 同一天内不重复同一道菜
+  //   2) 单餐卡路里不得超过当日剩余额度（否则会出现"预算 40 却推 160 的菜"）
+  function 生成一周计划(人群, 每日目标) {
+    var 已用ids = [];
+    var 天数 = [];
+
+    for (var d = 0; d < 计划天数; d++) {
+      var 当日餐 = [];
+      var 当日卡路里 = 0;
+      var 当日已用 = [];
+
+      for (var m = 0; m < 每日餐次.length; m++) {
+        var 剩余额度 = 每日目标 - 当日卡路里;
+        if (剩余额度 <= 100) break;
+
+        var 餐预算 = 剩余额度 / (每日餐次.length - m);
+
+        // 候选：本人群 + 本周未用过 + 今天未用过 + 单餐不超剩余额度
+        var 候选 = window.食谱数据.filter(function (菜) {
+          return 菜.人群.indexOf(人群) !== -1 &&
+                 已用ids.indexOf(菜.id) === -1 &&
+                 当日已用.indexOf(菜.id) === -1 &&
+                 菜.卡路里 <= 剩余额度;
+        });
+
+        if (候选.length === 0) {
+          // 本周可选项用尽：允许跨天重复，但同一天内仍不重复
+          候选 = window.食谱数据.filter(function (菜) {
+            return 菜.人群.indexOf(人群) !== -1 &&
+                   当日已用.indexOf(菜.id) === -1 &&
+                   菜.卡路里 <= 剩余额度;
+          });
+          if (候选.length === 0) break;
+        }
+
+        候选.sort(function (a, b) {
+          return Math.abs(a.卡路里 - 餐预算) - Math.abs(b.卡路里 - 餐预算);
+        });
+
+        var 选中 = 候选[0];
+        当日餐.push({
+          餐次: 每日餐次[m],
+          id: 选中.id,
+          名称: 选中.名称,
+          卡路里: 选中.卡路里
+        });
+        当日已用.push(选中.id);
+        已用ids.push(选中.id);
+        当日卡路里 += 选中.卡路里;
+      }
+
+      天数.push({
+        序号: d + 1,
+        名称: "第 " + (d + 1) + " 天",
+        餐: 当日餐,
+        卡路里合计: Math.round(当日卡路里)
+      });
+    }
+
+    return {
+      人群: 人群,
+      每日目标: 每日目标,
+      天数: 天数
+    };
+  }
+
+  function 渲染计划() {
+    var 容器 = 取元素("计划结果");
+    var 说明 = 取元素("计划说明");
+    var 范围说明 = 取元素("计划范围说明");
+    容器.innerHTML = "";
+
+    范围说明.textContent = "固定 " + 计划天数 + " 天，不提供 30 天计划。";
+
+    var 目标 = 读目标();
+    if (!目标) {
+      说明.textContent = "设置每日目标后，可生成连续 7 天的食谱安排。";
+      取元素("生成计划按钮").disabled = true;
+      return;
+    }
+    取元素("生成计划按钮").disabled = false;
+
+    var 计划 = 读计划();
+    if (!计划) {
+      说明.textContent = "点击「生成一周计划」，按「" + 目标.人群 + "」为你排出 7 天三餐。";
+      return;
+    }
+
+    说明.textContent = "按「" + 计划.人群 + "」生成，每日目标 " + 计划.每日目标 + " kcal。";
+
+    var 表 = document.createElement("div");
+    表.className = "计划表";
+
+    计划.天数.forEach(function (日) {
+      var 日块 = document.createElement("div");
+      日块.className = "计划日";
+
+      var 头 = document.createElement("div");
+      头.className = "计划日头";
+
+      var 名 = document.createElement("div");
+      名.className = "计划日名";
+      名.textContent = 日.名称;
+
+      var 统计 = document.createElement("div");
+      统计.className = "计划日统计" + (日.卡路里合计 > 计划.每日目标 ? " 超额度" : "");
+      统计.textContent = 日.卡路里合计 + " / " + 计划.每日目标 + " kcal";
+
+      头.appendChild(名);
+      头.appendChild(统计);
+      日块.appendChild(头);
+
+      if (日.餐.length === 0) {
+        var 空 = document.createElement("p");
+        空.className = "提示";
+        空.textContent = "该人群食谱不足，无法排出三餐。";
+        日块.appendChild(空);
+      } else {
+        日.餐.forEach(function (餐) {
+          var 行 = document.createElement("div");
+          行.className = "计划餐";
+
+          var 标签 = document.createElement("span");
+          标签.className = "餐次标签";
+          标签.textContent = 餐.餐次;
+
+          var 菜名 = document.createElement("span");
+          菜名.className = "菜名";
+          菜名.textContent = 餐.名称;
+
+          var 热量 = document.createElement("span");
+          热量.className = "热量";
+          热量.textContent = 餐.卡路里 + " kcal";
+
+          行.appendChild(标签);
+          行.appendChild(菜名);
+          行.appendChild(热量);
+          日块.appendChild(行);
+        });
+      }
+      表.appendChild(日块);
+    });
+
+    容器.appendChild(表);
+  }
+
+  function 生成计划() {
+    var 目标 = 读目标();
+    if (!目标) return;
+    var 计划 = 生成一周计划(目标.人群, 目标.目标);
+    写计划(计划);
+    渲染计划();
+  }
+
+  function 清除计划() {
+    写计划(null);
+    渲染计划();
   }
 
   function 渲染记录() {
@@ -394,8 +705,11 @@
       写记录([]);
       刷新所有();
     });
+    取元素("生成计划按钮").addEventListener("click", 生成计划);
+    取元素("清空计划按钮").addEventListener("click", 清除计划);
 
-    渲染全部();
+    渲染专区();
+    渲染计划();
     刷新所有();
   }
 
@@ -406,6 +720,8 @@
     计算基础代谢: 计算基础代谢,
     计算目标卡路里: 计算目标卡路里,
     汇总营养: 汇总营养,
-    生成推荐: 生成推荐
+    生成推荐: 生成推荐,
+    生成一周计划: 生成一周计划,
+    计划天数: 计划天数
   };
 })();

@@ -83,10 +83,24 @@
       <ul class="食谱列表" id="推荐列表"></ul>
     </section>
 
-    <!-- 全部食谱 -->
-    <section class="卡片" id="菜单卡片">
-      <h2>全部食谱</h2>
-      <ul class="食谱列表" id="全部列表"></ul>
+    <!-- 食谱专区：按人群分区浏览 -->
+    <section class="卡片" id="专区卡片">
+      <h2>④ 食谱专区</h2>
+      <p class="提示" id="专区说明">按人群分类浏览全部食谱，点击「记录」加入今天。</p>
+      <div class="分区导航" id="分区导航" role="tablist"></div>
+      <div class="分区内容" id="分区内容"></div>
+    </section>
+
+    <!-- 一周食谱计划（只提供 7 天，不做 30 天，见 PRD 三不原则第 3 条） -->
+    <section class="卡片" id="计划卡片">
+      <h2>⑤ 一周食谱计划</h2>
+      <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
+      <div class="计划操作">
+        <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
+        <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
+        <span class="提示" id="计划范围说明"></span>
+      </div>
+      <div id="计划结果"></div>
     </section>
 
     <!-- 今日已记录 -->
@@ -101,6 +115,7 @@
 
   <footer class="页脚">
     <p>数据为教学用估算值，不构成医学或营养建议。</p>
+    <p class="版权">食物图片来自 <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>，遵循 Unsplash License。</p>
   </footer>
 
   <script src="数据/食谱.js"></script>

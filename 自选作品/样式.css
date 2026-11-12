@@ -237,6 +237,172 @@ button {
 }
 .移除按钮:hover { background: #fdf0f0; }
 
+/* ---------- 食谱专区：分区导航 ---------- */
+.分区导航 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.分区按钮 {
+  padding: 7px 16px;
+  font-size: 13px;
+  background: var(--白);
+  color: var(--文字-淡);
+  border: 1px solid var(--蓝-边框);
+  border-radius: 999px;
+}
+.分区按钮:hover { border-color: var(--蓝-主); color: var(--蓝-主); }
+.分区按钮.选中 {
+  background: var(--蓝-主);
+  border-color: var(--蓝-主);
+  color: var(--白);
+}
+.分区按钮 .计数 {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
+/* ---------- 食谱专区：卡片网格 ---------- */
+.食谱网格 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.食谱卡 {
+  border: 1px solid var(--蓝-边框);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--白);
+  display: flex;
+  flex-direction: column;
+}
+.食谱卡:hover { border-color: var(--蓝-主); }
+
+/* 图片区：有图显示图，无图显示占位 */
+.食谱图 {
+  height: 112px;
+  background: var(--蓝-浅);
+  position: relative;
+  overflow: hidden;
+}
+.食谱图 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.食谱图 .占位 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--蓝-主);
+  background: linear-gradient(135deg, #e8f1fb 0%, #d5e3f3 100%);
+}
+
+.食谱卡内容 {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.食谱卡 .名字 {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--文字);
+}
+.食谱卡 .营养明细 {
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.食谱卡底部 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.食谱卡 .热量 b { font-size: 15px; }
+
+/* 空分区提示 */
+.空分区 {
+  padding: 24px;
+  text-align: center;
+  color: var(--文字-淡);
+  font-size: 13px;
+}
+
+/* ---------- 一周计划 ---------- */
+.计划操作 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.计划操作 .次按钮 { margin-top: 0; }
+.计划范围说明 {
+  font-size: 12px;
+  color: var(--文字-淡);
+}
+
+.计划表 {
+  display: grid;
+  gap: 10px;
+}
+.计划日 {
+  border: 1px solid var(--蓝-边框);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--白);
+}
+.计划日头 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--蓝-浅);
+}
+.计划日名 {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--蓝-深);
+}
+.计划日统计 {
+  font-size: 12px;
+  color: var(--文字-淡);
+  font-variant-numeric: tabular-nums;
+}
+.计划日统计.超额度 { color: var(--红); }
+
+.计划餐 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.计划餐 + .计划餐 { border-top: 1px solid #f1f6fc; }
+.餐次标签 {
+  flex: 0 0 44px;
+  font-size: 11px;
+  color: var(--文字-淡);
+}
+.计划餐 .菜名 { flex: 1; }
+.计划餐 .热量 {
+  font-size: 12px;
+  color: var(--文字-淡);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- 页脚 ---------- */
 .页脚 {
   text-align: center;
@@ -245,8 +411,12 @@ button {
   padding: 0 16px 32px;
 }
 .页脚 p { margin: 0; }
+.页脚 .版权 { margin-top: 6px; font-size: 11px; opacity: 0.8; }
+.页脚 a { color: var(--蓝-主); }
 
 @media (max-width: 560px) {
   .食谱项 { flex-wrap: wrap; }
   .热量 { min-width: 0; text-align: left; }
+  .食谱网格 { grid-template-columns: 1fr 1fr; }
+  .食谱图 { height: 90px; }
 }
