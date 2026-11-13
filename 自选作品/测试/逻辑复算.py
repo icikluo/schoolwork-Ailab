@@ -398,6 +398,21 @@ def AI已配置(设置):
 检查("密钥为空未配置", AI已配置({"密钥": ""}), False)
 检查("密钥非空已配置", AI已配置({"密钥": "  sk-xxx  "}), True)
 
+# --- 构造AI地址（域名自动补全 / 完整地址直用） ---
+def 构造AI地址(接口地址):
+    净 = str(接口地址 or "").strip().rstrip("/")
+    尾 = "/chat/completions"
+    return 净 if 净.endswith(尾) else 净 + 尾
+
+检查("只填域名自动补全路径", 构造AI地址("https://api.deepseek.com"),
+     "https://api.deepseek.com/chat/completions")
+检查("带路径的 base 同样补全（智谱写法）",
+     构造AI地址("https://open.bigmodel.cn/api/paas/v4/"),
+     "https://open.bigmodel.cn/api/paas/v4/chat/completions")
+检查("完整地址不再重复拼接",
+     构造AI地址("https://api.moonshot.cn/v1/chat/completions"),
+     "https://api.moonshot.cn/v1/chat/completions")
+
 # --- 密钥安全静态检查：仓库里不允许出现真实密钥 ---
 脚本 = Path(r"D:\lab\自选作品\脚本.js").read_text(encoding="utf-8")
 检查("脚本.js 不含疑似密钥字面量（sk-）", "sk-" in 脚本, False)

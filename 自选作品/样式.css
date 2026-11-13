@@ -652,3 +652,4 @@ button {
   font-size: 13px;
   color: var(--文字-淡);
 }
+.AI按钮行 { display: flex; gap: 8px; }

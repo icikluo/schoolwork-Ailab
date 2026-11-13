@@ -1070,6 +1070,35 @@
       : "未配置密钥：AI 功能暂不可用，页面其余功能不受影响。";
   }
 
+  // 「测试连接」：先按表单当前值保存，再发一个最小请求，
+  // 把「网络不通 / 密钥无效 / 一切正常」区分开。
+  function 处理AI测试() {
+    var 状态 = 取元素("AI状态");
+    var 接口 = 取元素("AI接口").value.trim();
+    var 模型 = 取元素("AI模型").value.trim();
+    var 密钥 = 取元素("AI密钥").value.trim();
+
+    if (接口.indexOf("http://") !== 0 && 接口.indexOf("https://") !== 0) {
+      状态.textContent = "接口地址需以 http:// 或 https:// 开头。";
+      return;
+    }
+    if (!模型 || !密钥) {
+      状态.textContent = "请先填好模型名和密钥再测试连接。";
+      return;
+    }
+    写AI设置({ 接口地址: 接口, 模型: 模型, 密钥: 密钥 });
+
+    状态.textContent = "测试连接中…";
+    请求AI(
+      [{ role: "user", content: "回复OK两个字母即可。" }],
+      { max_tokens: 8, temperature: 0 }
+    ).then(function () {
+      状态.textContent = "连接成功，接口与密钥均可用。";
+    }).catch(function (错误) {
+      状态.textContent = "连接失败：" + 截断(错误.message, 160);
+    });
+  }
+
   function 回填AI设置() {
     var 设置 = 读AI设置();
     取元素("AI接口").value = 设置.接口地址;
@@ -1082,21 +1111,47 @@
     return 文本.length > 长度 ? 文本.slice(0, 长度) + "…" : 文本;
   }
 
+  // 智能拼接接口地址：兼容只填域名（如 https://api.deepseek.com）
+  // 与直接粘贴完整地址（已含 /chat/completions）两种写法。
+  function 构造AI地址(接口地址) {
+    var 净 = String(接口地址 || "").trim().replace(/\/+$/, "");
+    if (净.slice(-"/chat/completions".length) === "/chat/completions") return 净;
+    return 净 + "/chat/completions";
+  }
+
+  // 把 fetch 的底层报错翻译成人话（2026-11-13 实测：
+  // DeepSeek / Kimi / 通义 DashScope 允许浏览器直连；智谱 BigModel 不允许，会被拦截）。
+  function 翻译网络错误(错误) {
+    if (错误 instanceof TypeError) {
+      return "网络请求没有到达接口（浏览器拦截或连接失败）。常见原因：" +
+        "① 服务商不允许浏览器直连——实测智谱 BigModel 会拦截，请换 DeepSeek / Kimi / 通义；" +
+        "② 接口地址填错（智谱的完整地址含 /api/paas/v4 路径）；" +
+        "③ 本机断网或代理异常。";
+    }
+    return 错误.message;
+  }
+
   // 统一的对话请求（OpenAI 兼容）。返回 Promise<string>（正文文本）。
-  function 请求AI(消息列表) {
+  function 请求AI(消息列表, 附加参数) {
     var 设置 = 读AI设置();
-    var 地址 = 设置.接口地址.replace(/\/+$/, "") + "/chat/completions";
+    var 地址 = 构造AI地址(设置.接口地址);
+    var 请求体 = {
+      model: 设置.模型,
+      messages: 消息列表,
+      temperature: 0.3
+    };
+    if (附加参数) {
+      Object.keys(附加参数).forEach(function (键) {
+        请求体[键] = 附加参数[键];
+      });
+    }
     return fetch(地址, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + 设置.密钥
       },
-      body: JSON.stringify({
-        model: 设置.模型,
-        messages: 消息列表,
-        temperature: 0.3
-      })
+      body: JSON.stringify(请求体)
     }).then(function (响应) {
       if (!响应.ok) {
         return 响应.text().then(function (错误文本) {
@@ -1111,6 +1166,8 @@
         throw new Error("AI 返回内容为空");
       }
       return 内容;
+    }).catch(function (错误) {
+      throw new Error(翻译网络错误(错误));
     });
   }
 
@@ -1386,8 +1443,9 @@
     取元素("生成计划按钮").addEventListener("click", 生成计划);
     取元素("清空计划按钮").addEventListener("click", 清除计划);
 
-    // AI 助手（可选功能）：设置 / 记录 / 分析 / 推荐
+    // AI 助手（可选功能）：设置 / 测试 / 记录 / 分析 / 推荐
     取元素("AI设置表单").addEventListener("submit", 保存AI设置);
+    取元素("AI测试按钮").addEventListener("click", 处理AI测试);
     取元素("AI记录表单").addEventListener("submit", 处理AI记录);
     取元素("AI分析按钮").addEventListener("click", 处理AI分析);
     取元素("AI推荐按钮").addEventListener("click", 处理AI推荐);
@@ -1415,6 +1473,7 @@
     计划天数: 计划天数,
     动作部位: 动作部位,
     AI默认设置: AI默认设置,
+    构造AI地址: 构造AI地址,
     从文本提取JSON: 从文本提取JSON,
     校验AI菜品: 校验AI菜品,
     校验AI推荐: 校验AI推荐

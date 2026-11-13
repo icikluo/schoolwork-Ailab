@@ -124,23 +124,34 @@
       <section class="卡片" id="AI卡片">
         <h2>⑥ AI 助手（可选，需联网）</h2>
         <p class="提示">
-          需自备大模型接口密钥（OpenAI 兼容，默认 DeepSeek）。密钥只保存在本浏览器，
-          不写进代码、不上传。不配置时，页面其余功能完全离线可用。
+          需自备大模型接口密钥（OpenAI 兼容）。密钥只保存在本浏览器，不写进代码、不上传。
+          不配置时，页面其余功能完全离线可用。
+          <strong>服务商兼容提示</strong>：实测允许浏览器直连的有 DeepSeek、Kimi（Moonshot）、
+          通义（DashScope 兼容模式）；智谱 BigModel 会拦截浏览器请求（报 Failed to fetch），
+          暂不可用。
         </p>
 
         <details class="AI设置折叠">
           <summary>接口设置</summary>
           <form id="AI设置表单" class="表单网格">
-            <label>接口地址
-              <input id="AI接口" type="url" value="https://api.deepseek.com" required>
+            <label>接口地址（域名或完整地址均可，自动补全 /chat/completions）
+              <input id="AI接口" type="url" list="AI接口预设" value="https://api.deepseek.com" required>
             </label>
+            <datalist id="AI接口预设">
+              <option value="https://api.deepseek.com">DeepSeek（实测可直连）</option>
+              <option value="https://api.moonshot.cn/v1">Kimi / Moonshot（实测可直连）</option>
+              <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">通义 DashScope 兼容模式（实测可直连）</option>
+            </datalist>
             <label>模型
               <input id="AI模型" type="text" value="deepseek-chat" required>
             </label>
             <label>密钥
               <input id="AI密钥" type="password" placeholder="只存本浏览器，不进代码仓库" autocomplete="off">
             </label>
-            <button type="submit" class="主按钮">保存设置</button>
+            <div class="AI按钮行">
+              <button type="submit" class="主按钮">保存设置</button>
+              <button type="button" class="次按钮" id="AI测试按钮">测试连接</button>
+            </div>
           </form>
         </details>
         <p class="提示" id="AI状态"></p>
