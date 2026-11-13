@@ -32,3 +32,7 @@ _*.png
 _v2/
 _v3/
 _v4/
+
+# 本地备份包与临时核对目录
+*.bundle
+_remote_check/
