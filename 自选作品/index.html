@@ -138,12 +138,12 @@
               <input id="AI接口" type="url" list="AI接口预设" value="https://api.deepseek.com" required>
             </label>
             <datalist id="AI接口预设">
-              <option value="https://api.deepseek.com">DeepSeek（实测可直连）</option>
-              <option value="https://api.moonshot.cn/v1">Kimi / Moonshot（实测可直连）</option>
-              <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">通义 DashScope 兼容模式（实测可直连）</option>
+              <option value="https://api.deepseek.com">DeepSeek（模型填 deepseek-flash，实测可直连）</option>
+              <option value="https://api.moonshot.cn/v1">Kimi / Moonshot（模型填 moonshot-v1-8k，实测可直连）</option>
+              <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">通义 DashScope 兼容模式（模型填 qwen-plus，实测可直连）</option>
             </datalist>
             <label>模型
-              <input id="AI模型" type="text" value="deepseek-chat" required>
+              <input id="AI模型" type="text" value="deepseek-flash" required>
             </label>
             <label>密钥
               <input id="AI密钥" type="password" placeholder="只存本浏览器，不进代码仓库" autocomplete="off">

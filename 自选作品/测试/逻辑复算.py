@@ -417,6 +417,14 @@ def 构造AI地址(接口地址):
 脚本 = Path(r"D:\lab\自选作品\脚本.js").read_text(encoding="utf-8")
 检查("脚本.js 不含疑似密钥字面量（sk-）", "sk-" in 脚本, False)
 检查("AI 默认密钥为空串", '密钥: ""' in 脚本, True)
+# DeepSeek 于 2026-09 下线 deepseek-chat，现役为 deepseek-flash；
+# 模型名写错会直接 400，故用静态检查锁住默认值（只扫代码行，注释里提到旧名属正常记录）。
+代码行 = "".join(
+    行 for 行 in 脚本.splitlines(keepends=True)
+    if not 行.lstrip().startswith(("//", "*", "/*"))
+)
+检查("AI 默认模型为现役名 deepseek-flash", '模型: "deepseek-flash"' in 代码行, True)
+检查("代码里不再出现过期模型名 deepseek-chat", "deepseek-chat" in 代码行, False)
 
 print(f"\n{'='*40}")
 print(f"通过 {通过} 项，失败 {失败} 项")

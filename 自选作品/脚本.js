@@ -1021,7 +1021,9 @@
   //   2) 未配置密钥或网络失败时，AI 功能给出提示并停用；其余功能完全不受影响，仍离线可用。
   //   3) 接口走 OpenAI 兼容 /chat/completions（默认 DeepSeek，可换任何兼容服务）。
   var AI设置存储键 = "食谱搭配-AI设置";
-  var AI默认设置 = { 接口地址: "https://api.deepseek.com", 模型: "deepseek-chat", 密钥: "" };
+  // 默认 DeepSeek：2026-09 起 deepseek-chat 已下线，现役模型名为 deepseek-flash / deepseek-v4-pro
+  // （见官方 api-docs.deepseek.com/quick_start/pricing）
+  var AI默认设置 = { 接口地址: "https://api.deepseek.com", 模型: "deepseek-flash", 密钥: "" };
   var 合法餐次表 = ["早", "午", "晚", "加餐"];
 
   function 读AI设置() {
@@ -1144,6 +1146,12 @@
       Object.keys(附加参数).forEach(function (键) {
         请求体[键] = 附加参数[键];
       });
+    }
+    // DeepSeek 默认开启思考模式（effort=high），本项目的场景是短文本提取与短评，
+    // 不需要推理链；显式关闭可显著降低延迟与费用。
+    // 只对 DeepSeek 加这个字段，避免其他服务商因不认识的参数报 400。
+    if (地址.indexOf("deepseek") !== -1) {
+      请求体.thinking = { type: "disabled" };
     }
     return fetch(地址, {
       method: "POST",
