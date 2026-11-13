@@ -8,7 +8,7 @@ from pathlib import Path
 
 # ---- 1. 读数据，校验字段契约 ----
 数据 = json.loads((根 / "数据" / "foods.json").read_text(encoding="utf-8"))
-字段 = ["id", "名称", "人群", "卡路里", "碳水", "脂肪", "膳食纤维", "蛋白质", "图片"]
+字段 = ["id", "名称", "人群", "卡路里", "碳水", "脂肪", "膳食纤维", "蛋白质", "食材", "步骤", "图片"]
 人群允许 = {"减脂", "增肌", "控糖", "均衡"}
 错误 = []
 ids = set()
@@ -33,6 +33,16 @@ for i, 菜 in enumerate(数据):
             错误.append(f"{位置} {f} 超过1位小数: {值}")
     if not 菜.get("人群") or not set(菜["人群"]) <= 人群允许:
         错误.append(f"{位置} 人群标签非法: {菜.get('人群')}")
+    # 食材与做法（v0.2 新增字段）：食材非空字符串；步骤为非空字符串数组
+    食材 = 菜.get("食材")
+    if not isinstance(食材, str) or not 食材.strip():
+        错误.append(f"{位置} 食材必须是非空字符串")
+    步骤 = 菜.get("步骤")
+    if not isinstance(步骤, list) or not 步骤:
+        错误.append(f"{位置} 步骤必须是非空数组")
+    elif not all(isinstance(s, str) and s.strip() for s in 步骤):
+        错误.append(f"{位置} 步骤中存在空条目或非字符串")
+
     # 图片：必须是本地相对路径（保证离线可用）；空字符串表示暂无配图
     图片 = 菜.get("图片")
     if not isinstance(图片, str):
