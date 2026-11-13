@@ -324,8 +324,11 @@
 2. **密钥安全**：密钥只存浏览器 `localStorage`（`食谱搭配-AI设置`），不写进代码、
    不进 Git 仓库（仓库公开）；页面提供 password 输入框填写。
    `测试/逻辑复算.py` 有静态检查项，拦截代码里的疑似密钥字面量。
-3. **接口标准**：OpenAI 兼容 `/chat/completions`，默认 DeepSeek（`deepseek-chat`），
-   接口地址与模型名均可在页面设置里更换，不引入任何第三方库（原生 `fetch`）。
+3. **接口标准**：OpenAI 兼容 `/chat/completions`，默认 DeepSeek（模型 `deepseek-flash`，
+   `deepseek-chat` 已于 2026-09 下线），接口地址与模型名均可在页面设置里更换，
+   不引入任何第三方库（原生 `fetch`）。调用 DeepSeek 时自动带
+   `{"thinking":{"type":"disabled"}}` 关闭思考模式（默认开启会明显增加延迟与费用；
+   其他服务商不加该字段，避免参数不识别报 400）。
    地址自动补全：填域名或带路径的 base 均可，页面会拼上 `/chat/completions`；
    设置里有「测试连接」按钮，把网络不通 / 密钥无效 / 一切正常三种情况区分开。
    **服务商浏览器直连兼容性（2026-11-13 实测）**：DeepSeek ✅、Kimi/Moonshot ✅、
