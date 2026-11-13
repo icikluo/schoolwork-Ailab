@@ -1015,6 +1015,341 @@
     切换主分区(当前主分区);
   }
 
+  // ============ AI 助手（v0.3 新增，可选功能，需联网） ============
+  // 三条边界（见 PRD 5.13）：
+  //   1) 密钥只存浏览器 localStorage，不写进代码、不进仓库、不上传任何服务器（仓库是公开的）。
+  //   2) 未配置密钥或网络失败时，AI 功能给出提示并停用；其余功能完全不受影响，仍离线可用。
+  //   3) 接口走 OpenAI 兼容 /chat/completions（默认 DeepSeek，可换任何兼容服务）。
+  var AI设置存储键 = "食谱搭配-AI设置";
+  var AI默认设置 = { 接口地址: "https://api.deepseek.com", 模型: "deepseek-chat", 密钥: "" };
+  var 合法餐次表 = ["早", "午", "晚", "加餐"];
+
+  function 读AI设置() {
+    var 缺省 = { 接口地址: AI默认设置.接口地址, 模型: AI默认设置.模型, 密钥: "" };
+    try {
+      var 原文 = localStorage.getItem(AI设置存储键);
+      var 存 = 原文 ? JSON.parse(原文) : {};
+      if (typeof 存.接口地址 === "string" && 存.接口地址) 缺省.接口地址 = 存.接口地址;
+      if (typeof 存.模型 === "string" && 存.模型) 缺省.模型 = 存.模型;
+      if (typeof 存.密钥 === "string") 缺省.密钥 = 存.密钥;
+    } catch (e) { /* 存档损坏则回退默认 */ }
+    return 缺省;
+  }
+
+  function 写AI设置(设置) {
+    localStorage.setItem(AI设置存储键, JSON.stringify(设置));
+  }
+
+  function AI已配置(设置) {
+    设置 = 设置 || 读AI设置();
+    return 设置.密钥.trim().length > 0;
+  }
+
+  function 保存AI设置(事件) {
+    事件.preventDefault();
+    var 接口 = 取元素("AI接口").value.trim();
+    var 模型 = 取元素("AI模型").value.trim();
+    var 密钥 = 取元素("AI密钥").value.trim();
+    var 状态 = 取元素("AI状态");
+
+    if (接口.indexOf("http://") !== 0 && 接口.indexOf("https://") !== 0) {
+      状态.textContent = "接口地址需以 http:// 或 https:// 开头。";
+      return;
+    }
+    if (!模型) {
+      状态.textContent = "模型名不能为空。";
+      return;
+    }
+    写AI设置({ 接口地址: 接口, 模型: 模型, 密钥: 密钥 });
+    显示AI状态();
+  }
+
+  function 显示AI状态() {
+    取元素("AI状态").textContent = AI已配置()
+      ? "已配置，AI 功能可用（密钥仅保存在本浏览器）。"
+      : "未配置密钥：AI 功能暂不可用，页面其余功能不受影响。";
+  }
+
+  function 回填AI设置() {
+    var 设置 = 读AI设置();
+    取元素("AI接口").value = 设置.接口地址;
+    取元素("AI模型").value = 设置.模型;
+    取元素("AI密钥").value = 设置.密钥;   // type=password，不回显明文
+  }
+
+  function 截断(文本, 长度) {
+    文本 = String(文本 || "");
+    return 文本.length > 长度 ? 文本.slice(0, 长度) + "…" : 文本;
+  }
+
+  // 统一的对话请求（OpenAI 兼容）。返回 Promise<string>（正文文本）。
+  function 请求AI(消息列表) {
+    var 设置 = 读AI设置();
+    var 地址 = 设置.接口地址.replace(/\/+$/, "") + "/chat/completions";
+    return fetch(地址, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + 设置.密钥
+      },
+      body: JSON.stringify({
+        model: 设置.模型,
+        messages: 消息列表,
+        temperature: 0.3
+      })
+    }).then(function (响应) {
+      if (!响应.ok) {
+        return 响应.text().then(function (错误文本) {
+          throw new Error("接口返回 " + 响应.status + "：" + 截断(错误文本, 120));
+        });
+      }
+      return 响应.json();
+    }).then(function (数据) {
+      var 内容 = 数据 && 数据.choices && 数据.choices[0] &&
+        数据.choices[0].message && 数据.choices[0].message.content;
+      if (typeof 内容 !== "string" || !内容.trim()) {
+        throw new Error("AI 返回内容为空");
+      }
+      return 内容;
+    });
+  }
+
+  // 从 AI 回复中提取 JSON（容忍 ```json 围栏与前后废话）。失败返回 null。
+  function 从文本提取JSON(文本) {
+    var 净 = String(文本 || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+    var 首 = 净.indexOf("{");
+    var 尾 = 净.lastIndexOf("}");
+    if (首 === -1 || 尾 === -1 || 尾 <= 首) return null;
+    try {
+      return JSON.parse(净.slice(首, 尾 + 1));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 校验 AI 记录返回的菜品：字段齐全、数值在契约区间。不合法返回 null。
+  // 区间与 5.3 食谱契约一致：卡路里 0–3000，克数 0–500。
+  function 校验AI菜品(对象) {
+    if (!对象 || typeof 对象 !== "object") return null;
+    if (typeof 对象.名称 !== "string" || !对象.名称.trim()) return null;
+
+    var 菜 = {
+      名称: 对象.名称.trim().slice(0, 20),
+      卡路里: Number(对象.卡路里),
+      碳水: Number(对象.碳水),
+      脂肪: Number(对象.脂肪),
+      膳食纤维: Number(对象.膳食纤维),
+      蛋白质: Number(对象.蛋白质)
+    };
+    if (isNaN(菜.卡路里) || 菜.卡路里 < 0 || 菜.卡路里 > 3000) return null;
+
+    var 克数合法 = ["碳水", "脂肪", "膳食纤维", "蛋白质"].every(function (字段) {
+      return !isNaN(菜[字段]) && 菜[字段] >= 0 && 菜[字段] <= 500;
+    });
+    if (!克数合法) return null;
+
+    菜.卡路里 = Math.round(菜.卡路里);
+    ["碳水", "脂肪", "膳食纤维", "蛋白质"].forEach(function (字段) {
+      菜[字段] = 保留一位小数(菜[字段]);
+    });
+    return 菜;
+  }
+
+  // AI 记录的菜品 id 用 "AI" + 时间戳，与食谱 id（r###）天然不冲突；
+  // 人群为空数组（AI 记录不属于任何人群标签），五类营养由 AI 估算。
+  function 添加AI记录(菜品, 餐次) {
+    var 记录 = 读记录();
+    记录.push({
+      id: "AI" + Date.now(),
+      名称: 菜品.名称,
+      人群: [],
+      卡路里: 菜品.卡路里,
+      碳水: 菜品.碳水,
+      脂肪: 菜品.脂肪,
+      膳食纤维: 菜品.膳食纤维,
+      蛋白质: 菜品.蛋白质,
+      来源: "AI",
+      餐次: 合法餐次表.indexOf(餐次) !== -1 ? 餐次 : 判定餐次()
+    });
+    写记录(记录);
+    刷新所有();
+  }
+
+  // ① AI 记录：一句话描述 → AI 估算营养 → 写入今日记录
+  function 处理AI记录(事件) {
+    事件.preventDefault();
+    var 描述 = 取元素("AI记录输入").value.trim();
+    var 提示 = 取元素("AI记录提示");
+
+    if (!描述) { 提示.textContent = "请先描述吃了什么。"; return; }
+    if (!AI已配置()) { 提示.textContent = "请先在上方「接口设置」里填入密钥。"; return; }
+
+    提示.textContent = "识别中…（需要联网）";
+    var 消息 = [
+      { role: "system", content: "你是饮食记录助手。根据用户描述估算这份食物的营养，" +
+        "输出严格 JSON（不要任何多余文字）：{\"名称\":\"...\",\"卡路里\":整数,\"碳水\":数字," +
+        "\"脂肪\":数字,\"膳食纤维\":数字,\"蛋白质\":数字,\"餐次\":\"早/午/晚/加餐\"}。" +
+        "规则：卡路里 0–3000；其余单位为克、0–500；数字不带单位；名称不超过 12 字；" +
+        "餐次按描述里的时间推断，没有线索就按用户当前时段。" },
+      { role: "user", content: "当前时间 " + new Date().getHours() +
+        " 点。用户描述：" + 描述 }
+    ];
+
+    请求AI(消息).then(function (回复) {
+      var 对象 = 从文本提取JSON(回复);
+      var 菜品 = 校验AI菜品(对象);
+      if (!菜品) {
+        提示.textContent = "AI 返回的数据不合法，没有记录。可以换个说法再试。";
+        return;
+      }
+      添加AI记录(菜品, 对象 && 对象.餐次);
+      取元素("AI记录输入").value = "";
+      提示.textContent = "已记录：" + 菜品.名称 + "（" + 菜品.卡路里 + " kcal，AI 估算）";
+    }).catch(function (错误) {
+      提示.textContent = "AI 记录失败（网络或密钥问题）：" + 截断(错误.message, 100);
+    });
+  }
+
+  // ② AI 营养分析：今日记录 + 目标 → 一段文字短评（不构成营养建议）
+  function 处理AI分析() {
+    var 结果盒 = 取元素("AI分析结果");
+    结果盒.hidden = false;
+
+    if (!AI已配置()) {
+      结果盒.textContent = "请先在「⑥ AI 助手」的接口设置里填入密钥。";
+      return;
+    }
+    var 记录 = 读记录();
+    if (记录.length === 0) {
+      结果盒.textContent = "今天还没有记录，先记几道菜再来分析。";
+      return;
+    }
+
+    结果盒.textContent = "分析中…（需要联网）";
+    var 目标 = 读目标();
+    var 合计 = 汇总营养(记录);
+    var 上下文 = {
+      目标: 目标 ? { 人群: 目标.人群, 卡路里: 目标.目标, 宏量目标: 计算宏量目标(目标.目标, 目标.人群) } : null,
+      今日已摄入: 合计,
+      明细: 记录.map(function (条) {
+        return { 名称: 条.名称, 餐次: 条.餐次, 卡路里: 条.卡路里 };
+      })
+    };
+    var 消息 = [
+      { role: "system", content: "你是饮食总结助手。用不超过 120 字的中文短评今日摄入与目标的差距：" +
+        "先说卡路里，再说蛋白质 / 脂肪 / 碳水的达标情况，最后一句中性观察。" +
+        "只用一段文字，不用列表、标题或图表。开头不要客套。这是教学演示，" +
+        "不构成营养或医学建议，不要给出医疗性指令。" },
+      { role: "user", content: JSON.stringify(上下文) }
+    ];
+
+    请求AI(消息).then(function (回复) {
+      结果盒.textContent = 截断(回复.trim(), 300);
+    }).catch(function (错误) {
+      结果盒.textContent = "分析失败（网络或密钥问题）：" + 截断(错误.message, 100);
+    });
+  }
+
+  // ③ AI 个性化推荐：人群 + 宏量缺口 + 剩余额度 → 从 40 道菜里选 3 道并给理由。
+  // 校验不通过的候选项直接丢弃，宁可少推也不硬推。
+  function 校验AI推荐(对象, 菜单, 已记录ids, 剩余额度) {
+    var 结果 = { 推荐项: [], 总评: "" };
+    if (!对象 || typeof 对象 !== "object" || !Array.isArray(对象.推荐)) return 结果;
+    if (typeof 对象.总评 === "string") 结果.总评 = 截断(对象.总评.trim(), 60);
+
+    var 见过 = [];
+    对象.推荐.forEach(function (项) {
+      if (!项 || typeof 项.id !== "string") return;
+      if (见过.indexOf(项.id) !== -1) return;
+
+      var 菜 = null;
+      for (var i = 0; i < 菜单.length; i++) {
+        if (菜单[i].id === 项.id) { 菜 = 菜单[i]; break; }
+      }
+      if (!菜) return;                                  // id 不在候选菜单里
+      if (已记录ids.indexOf(菜.id) !== -1) return;      // 今天已吃过
+      if (菜.卡路里 > 剩余额度) return;                  // 超剩余额度
+
+      见过.push(菜.id);
+      结果.推荐项.push({
+        菜: 菜,
+        理由: typeof 项.理由 === "string" ? 截断(项.理由.trim(), 30) : ""
+      });
+    });
+    return 结果;
+  }
+
+  function 处理AI推荐() {
+    var 说明 = 取元素("AI推荐说明");
+    取元素("AI推荐列表").innerHTML = "";
+
+    if (!AI已配置()) { 说明.textContent = "请先在接口设置里填入密钥。"; return; }
+    var 目标 = 读目标();
+    if (!目标) { 说明.textContent = "先设置每日目标，AI 才知道往哪个方向推荐。"; return; }
+
+    var 记录 = 读记录();
+    var 合计 = 汇总营养(记录);
+    var 剩余 = Math.max(目标.目标 - 合计.卡路里, 0);
+    var 已记录ids = 记录.map(function (条) { return 条.id; });
+    if (剩余 <= 100) { 说明.textContent = "今日已达目标额度，AI 也不再推荐。"; return; }
+
+    var 宏量 = 计算宏量目标(目标.目标, 目标.人群);
+    var 菜单 = window.食谱数据.map(function (菜) {
+      return {
+        id: 菜.id, 名称: 菜.名称, 人群: 菜.人群, 卡路里: 菜.卡路里,
+        碳水: 菜.碳水, 脂肪: 菜.脂肪, 膳食纤维: 菜.膳食纤维, 蛋白质: 菜.蛋白质
+      };
+    });
+    var 上下文 = {
+      目标人群: 目标.人群,
+      每日目标: 目标.目标,
+      剩余额度: 剩余,
+      今日已吃: 记录.map(function (条) { return 条.名称; }),
+      宏量缺口: {
+        蛋白质: Math.max(宏量.蛋白质 - 合计.蛋白质, 0),
+        脂肪: Math.max(宏量.脂肪 - 合计.脂肪, 0),
+        碳水: Math.max(宏量.碳水 - 合计.碳水, 0)
+      },
+      候选菜单: 菜单
+    };
+    var 消息 = [
+      { role: "system", content: "你是食谱推荐助手。只能从候选菜单里按 id 选菜，" +
+        "输出严格 JSON（不要任何多余文字）：{\"推荐\":[{\"id\":\"r###\",\"理由\":\"不超过 20 字\"}]," +
+        "\"总评\":\"不超过 30 字\"}。规则：最多 3 道；优先选带目标人群标签的；" +
+        "优先补宏量缺口大的营养素；单道卡路里不得超过剩余额度；今天已吃过的不要再选。" },
+      { role: "user", content: JSON.stringify(上下文) }
+    ];
+
+    说明.textContent = "AI 挑选中…（需要联网）";
+    请求AI(消息).then(function (回复) {
+      var 结果 = 校验AI推荐(从文本提取JSON(回复), 菜单, 已记录ids, 剩余);
+      if (结果.推荐项.length === 0) {
+        说明.textContent = "AI 没有给出满足约束的推荐，可重试，或看上方规则推荐。";
+        return;
+      }
+      说明.textContent = 结果.总评 ||
+        "AI 结合宏量缺口与剩余额度挑了 " + 结果.推荐项.length + " 道。";
+      渲染AI推荐(结果.推荐项);
+    }).catch(function (错误) {
+      说明.textContent = "AI 推荐失败（网络或密钥问题）：" + 截断(错误.message, 100);
+    });
+  }
+
+  function 渲染AI推荐(推荐项) {
+    var 容器 = 取元素("AI推荐列表");
+    容器.innerHTML = "";
+    推荐项.forEach(function (项) {
+      var li = 创建菜单项(项.菜, "加入");
+      if (项.理由) {
+        var 理由 = document.createElement("p");
+        理由.className = "AI理由";
+        理由.textContent = "✦ " + 项.理由;
+        li.appendChild(理由);
+      }
+      容器.appendChild(li);
+    });
+  }
+
   function 初始化() {
     // 自检：数据文件缺失时给出明确提示，避免页面"看起来正常但完全不可用"。
     // 见 作业/A1/A1-运行证据.md 实验 C。
@@ -1051,6 +1386,14 @@
     取元素("生成计划按钮").addEventListener("click", 生成计划);
     取元素("清空计划按钮").addEventListener("click", 清除计划);
 
+    // AI 助手（可选功能）：设置 / 记录 / 分析 / 推荐
+    取元素("AI设置表单").addEventListener("submit", 保存AI设置);
+    取元素("AI记录表单").addEventListener("submit", 处理AI记录);
+    取元素("AI分析按钮").addEventListener("click", 处理AI分析);
+    取元素("AI推荐按钮").addEventListener("click", 处理AI推荐);
+    回填AI设置();
+    显示AI状态();
+
     渲染专区();
     渲染计划();
     渲染动作();
@@ -1070,6 +1413,10 @@
     生成推荐: 生成推荐,
     生成一周计划: 生成一周计划,
     计划天数: 计划天数,
-    动作部位: 动作部位
+    动作部位: 动作部位,
+    AI默认设置: AI默认设置,
+    从文本提取JSON: 从文本提取JSON,
+    校验AI菜品: 校验AI菜品,
+    校验AI推荐: 校验AI推荐
   };
 })();
