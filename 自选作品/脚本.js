@@ -557,15 +557,20 @@
     表.className = "计划表";
 
     计划.天数.forEach(function (日) {
+      var 是今天 = 日.序号 === 1;
       var 日块 = document.createElement("div");
-      日块.className = "计划日";
+      // 今天（第 1 天）默认展开并高亮；其余 6 天折叠，点标题行切换
+      日块.className = "计划日" + (是今天 ? " 今天" : " 收起");
 
       var 头 = document.createElement("div");
       头.className = "计划日头";
+      头.addEventListener("click", function () {
+        日块.classList.toggle("收起");
+      });
 
       var 名 = document.createElement("div");
       名.className = "计划日名";
-      名.textContent = 日.名称;
+      名.textContent = 是今天 ? "今天（第 1 天）" : 日.名称;
 
       var 统计 = document.createElement("div");
       统计.className = "计划日统计" + (日.卡路里合计 > 计划.每日目标 ? " 超额度" : "");
@@ -692,6 +697,9 @@
 
     取元素("已摄入").textContent = 合计.卡路里;
 
+    // 顶栏常驻目标值（滚动到哪都能看到自己的额度）
+    取元素("顶栏目标").textContent = 目标值 === null ? "—" : 目标值;
+
     // 直接按 id 取，不再依赖 nextElementSibling 的 DOM 顺序。
     // 结构一改就崩，这正是第 5 周要讲的"隐式契约"问题。
     var 目标文本 = 目标值 === null ? "—" : 目标值;
@@ -772,6 +780,19 @@
     刷新所有();
   }
 
+  // 设置卡片：折叠交互（目标设好后收起表单，只留摘要，低频操作不占首屏）
+  function 更新设置摘要(目标) {
+    取元素("设置摘要").textContent = 目标
+      ? 目标.人群 + " · 目标 " + 目标.目标 + " kcal · "
+        + (目标.性别 === "男" ? "男" : "女") + " " + 目标.年龄 + " 岁"
+      : "先填身体数据，算出每日目标。";
+  }
+
+  function 折叠设置(收起) {
+    取元素("设置主体").hidden = 收起;
+    取元素("设置开关").textContent = 收起 ? "修改" : "收起";
+  }
+
   function 设置目标(事件) {
     事件.preventDefault();
 
@@ -794,6 +815,8 @@
     });
 
     显示目标结果(结果);
+    更新设置摘要(读目标());
+    折叠设置(true);
     刷新所有();
     // 目标变了，计划区需要刷新：解锁「生成计划」按钮并更新提示。
     // 否则设置目标后按钮仍处于 disabled 状态，用户点不动。
@@ -848,7 +871,7 @@
     };
     var 路径 = 图[动作.部位] || 图.全身;
     var svg = '<svg viewBox="0 0 120 100" width="150" height="125" ' +
-      'fill="none" stroke="#2b6cb0" stroke-width="3.2" stroke-linecap="round" ' +
+      'fill="none" stroke="#3B6D11" stroke-width="3.2" stroke-linecap="round" ' +
       'aria-label="' + 动作.名称 + ' 示意图" role="img">' + 路径 + '</svg>';
 
     var 盒 = document.createElement("div");
@@ -1042,6 +1065,19 @@
       }
       显示目标结果(结果);
     }
+
+    // 首屏日期（今日餐盘右上角）
+    var 今 = new Date();
+    取元素("今日日期").textContent =
+      (今.getMonth() + 1) + " 月 " + 今.getDate() + " 日 · 周" +
+      "日一二三四五六".charAt(今.getDay());
+
+    // 设置卡片：已有目标则折叠为摘要，未设置则展开表单引导填写
+    更新设置摘要(目标);
+    折叠设置(Boolean(目标));
+    取元素("设置开关").addEventListener("click", function () {
+      折叠设置(!取元素("设置主体").hidden);
+    });
 
     取元素("设置表单").addEventListener("submit", 设置目标);
     取元素("清空按钮").addEventListener("click", function () {

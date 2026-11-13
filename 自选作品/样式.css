@@ -1,216 +1,324 @@
-/* 食谱搭配 —— 简洁白蓝风格 */
+/* 食谱搭配 —— 自然系视觉（暖纸底 / 深绿主导 / 番茄红警示）
+ * 版式：吸顶导航 + 今日餐盘首屏 + 左右双栏（移动端单列）
+ * 字体：中文衬线做标题与大数字，系统无衬线做正文，零外链、离线可用
+ */
 
 :root {
-  --蓝-主: #2b6cb0;
-  --蓝-深: #1e4e8c;
-  --蓝-浅: #e8f1fb;
-  --蓝-边框: #d5e3f3;
-  --白: #ffffff;
-  --底: #f6f9fd;
-  --文字: #1f2d3d;
-  --文字-淡: #64748b;
-  --绿: #2f9e6f;
-  --红: #d64545;
-  --圆角: 12px;
-  --阴影: 0 1px 3px rgba(43, 108, 176, 0.08);
+  /* 配色：主色绿约 60% 视觉权重，纸色 30%，番茄红只做超额/删除警示 */
+  --纸底: #F4F1E8;
+  --卡白: #FFFFFF;
+  --绿-深: #27500A;
+  --绿-主: #3B6D11;
+  --绿-中: #639922;
+  --绿-浅: #EAF3DE;
+  --绿-边: #D6E4C2;
+  --边框: #E5E2D5;
+  --边框-深: #CFCBBB;
+  --文字: #2C2C2A;
+  --文字-淡: #6F6D64;
+  --红: #B23A3A;
+  --红-浅: #F8ECEC;
+  --红-边: #EACBcb;
+  --黄-底: #FBF7EC;
+  --黄-边: #E8DDBE;
+  --黄-字: #7A5F1C;
+  --圆角: 14px;
+  --圆角-小: 9px;
+  --衬线: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --无衬线: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  --动效: 0.2s ease-out;
 }
 
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
   margin: 0;
-  background: var(--底);
+  background: var(--纸底);
   color: var(--文字);
-  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-family: var(--无衬线);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
-h1, h2 { margin: 0; font-weight: 600; }
+h1, h2 { margin: 0; font-weight: 500; }
 
-/* ---------- 顶栏 ---------- */
+a { color: var(--绿-主); }
+
+:focus-visible {
+  outline: 2px solid var(--绿-中);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 数字一律等宽，避免累加时跳动 */
+b, strong, .热量, .营养明细, .计划日统计 {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 顶栏（吸顶细导航） ---------- */
 .顶栏 {
-  background: var(--蓝-主);
-  color: var(--白);
-  padding: 28px 24px 24px;
-  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--卡白);
+  border-bottom: 1px solid var(--边框);
 }
-.顶栏 h1 { font-size: 26px; letter-spacing: 2px; }
-.副标题 { margin: 6px 0 0; font-size: 14px; opacity: 0.85; }
-
-/* ---------- 主功能分区导航 ---------- */
+.顶栏内容 {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.站名组 { display: flex; align-items: baseline; gap: 10px; }
+.顶栏 h1 {
+  font-family: var(--衬线);
+  font-size: 21px;
+  letter-spacing: 0.06em;
+  color: var(--绿-深);
+}
+.副标题 {
+  font-size: 12px;
+  color: var(--文字-淡);
+  letter-spacing: 0.08em;
+}
 .主导航 {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 4px;
+  margin-left: auto;
 }
 .主导航按钮 {
-  padding: 9px 26px;
+  padding: 7px 20px;
   font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--文字-淡);
+  background: transparent;
+  border: none;
   border-radius: 999px;
-  transition: background 0.15s, color 0.15s;
+  transition: color var(--动效), background var(--动效);
 }
-.主导航按钮:hover {
-  background: rgba(255, 255, 255, 0.26);
-  color: #fff;
-}
+.主导航按钮:hover { color: var(--绿-主); background: var(--绿-浅); }
 .主导航按钮.选中 {
-  background: var(--白);
-  color: var(--蓝-深);
-  border-color: var(--白);
+  color: var(--卡白);
+  background: var(--绿-主);
 }
-
-/* ---------- 功能区容器 ---------- */
-.功能区 {
-  display: grid;
-  gap: 16px;
+.顶栏目标 {
+  font-size: 13px;
+  color: var(--文字-淡);
+  white-space: nowrap;
 }
-.功能区[hidden] { display: none; }
+.顶栏目标 b {
+  font-family: var(--衬线);
+  font-size: 17px;
+  color: var(--绿-深);
+  font-weight: 500;
+}
+.顶栏目标 small { font-size: 11px; }
 
 /* ---------- 布局 ---------- */
 .容器 {
-  max-width: 880px;
+  max-width: 1060px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 22px 20px 56px;
   display: grid;
   gap: 16px;
 }
+.功能区 { display: grid; gap: 16px; }
+.功能区[hidden] { display: none; }
 
 .卡片 {
-  background: var(--白);
-  border: 1px solid var(--蓝-边框);
+  background: var(--卡白);
+  border: 1px solid var(--边框);
   border-radius: var(--圆角);
-  box-shadow: var(--阴影);
   padding: 20px 22px;
 }
 .卡片 h2 {
-  font-size: 16px;
-  color: var(--蓝-深);
+  font-family: var(--衬线);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--绿-深);
+}
+.卡片 > h2 {
   padding-bottom: 12px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--蓝-浅);
+  border-bottom: 1px solid var(--绿-浅);
 }
-
-/* ---------- 表单 ---------- */
-.表单网格 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px;
-  align-items: end;
-}
-.表单网格 label {
+.卡片头 {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--文字-淡);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
 }
-input, select {
-  font: inherit;
-  font-size: 14px;
-  padding: 9px 11px;
-  border: 1px solid var(--蓝-边框);
-  border-radius: 8px;
-  background: var(--白);
-  color: var(--文字);
-  outline: none;
-}
-input:focus, select:focus {
-  border-color: var(--蓝-主);
-  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.12);
-}
+.卡片头 h2 { margin: 0; }
 
-button {
-  font: inherit;
-  cursor: pointer;
-  border-radius: 8px;
-  border: none;
-  transition: background 0.15s;
-}
-.主按钮 {
-  padding: 10px 18px;
-  background: var(--蓝-主);
-  color: var(--白);
-  font-weight: 600;
-  white-space: nowrap;
-}
-.主按钮:hover { background: var(--蓝-深); }
-.次按钮 {
-  padding: 8px 16px;
-  background: var(--蓝-浅);
-  color: var(--蓝-深);
-  margin-top: 12px;
-}
-.次按钮:hover { background: #dbe9fa; }
-
-/* ---------- 目标结果 ---------- */
-.目标结果 {
-  margin-top: 18px;
-  padding: 16px 18px;
-  background: var(--蓝-浅);
-  border-radius: 10px;
+/* ---------- 今日餐盘（首屏主视觉） ---------- */
+.今日卡片 { padding: 24px 28px; }
+.今日头 {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px;
 }
-.目标结果 .标签 { font-size: 13px; color: var(--文字-淡); width: 100%; }
-.目标结果 strong {
-  font-size: 30px;
-  color: var(--蓝-深);
-  font-variant-numeric: tabular-nums;
+.今日头 h2 { font-size: 18px; }
+.今日日期 { font-size: 12px; color: var(--文字-淡); letter-spacing: 0.05em; }
+.今日数字 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 4px;
 }
-.目标结果 .单位 { color: var(--文字-淡); font-size: 14px; }
-.提示 {
-  margin: 0;
-  font-size: 13px;
-  color: var(--文字-淡);
+.今日数字 strong {
+  font-family: var(--衬线);
+  font-size: 46px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--绿-深);
 }
-.目标结果 .提示 { width: 100%; }
+.今日数字 strong,
+.今日数字 strong * { font-variant-numeric: tabular-nums; }
+.今日对照 { font-size: 14px; color: var(--文字-淡); }
 
-/* ---------- 进度 ---------- */
 .进度条 {
   height: 10px;
-  background: var(--蓝-浅);
+  background: var(--绿-浅);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin: 14px 0 16px;
 }
 .进度填充 {
   height: 100%;
   width: 0;
-  background: var(--蓝-主);
+  background: var(--绿-中);
   border-radius: 999px;
-  transition: width 0.3s, background 0.3s;
+  transition: width 0.35s ease-out, background 0.35s ease-out;
 }
 .进度填充.超出 { background: var(--红); }
 
 .营养概览 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
 .营养项 {
-  background: var(--底);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: var(--纸底);
+  border-radius: var(--圆角-小);
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
 }
 .营养项 span { font-size: 12px; color: var(--文字-淡); }
-.营养项 b {
-  font-size: 19px;
-  font-variant-numeric: tabular-nums;
-  color: var(--蓝-深);
-}
+.营养项 b { font-size: 19px; font-weight: 500; color: var(--绿-深); margin-top: 2px; }
 .营养项 small { font-size: 11px; color: var(--文字-淡); }
 
-/* ---------- 食谱列表 ---------- */
+/* ---------- 饮食双栏 ---------- */
+.饮食布局 {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.左栏, .右栏 { display: grid; gap: 16px; }
+
+/* ---------- 设置卡片（可折叠） ---------- */
+.设置摘要 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--文字-淡);
+  line-height: 1.6;
+}
+.设置主体[hidden] { display: none; }
+.文字按钮 {
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--绿-主);
+  background: transparent;
+  border: 1px solid var(--绿-边);
+  border-radius: 999px;
+  transition: background var(--动效);
+}
+.文字按钮:hover { background: var(--绿-浅); }
+
+/* ---------- 表单 ---------- */
+.表单网格 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+.表单网格 label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--文字-淡);
+}
+input, select {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--边框-深);
+  border-radius: var(--圆角-小);
+  background: var(--卡白);
+  color: var(--文字);
+  outline: none;
+  transition: border-color var(--动效);
+}
+input:focus, select:focus {
+  border-color: var(--绿-主);
+  box-shadow: 0 0 0 3px rgba(99, 153, 34, 0.15);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--圆角-小);
+  border: none;
+  transition: background var(--动效), color var(--动效), border-color var(--动效);
+}
+.主按钮 {
+  padding: 9px 18px;
+  background: var(--绿-主);
+  color: var(--卡白);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.主按钮:hover { background: var(--绿-深); }
+.次按钮 {
+  padding: 8px 16px;
+  background: var(--卡白);
+  color: var(--绿-主);
+  border: 1px solid var(--绿-边);
+  margin-top: 12px;
+}
+.次按钮:hover { background: var(--绿-浅); }
+
+/* ---------- 目标结果 ---------- */
+.目标结果 {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--绿-浅);
+  border-radius: var(--圆角-小);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.目标结果 .标签 { font-size: 12px; color: var(--文字-淡); width: 100%; }
+.目标结果 strong {
+  font-family: var(--衬线);
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--绿-深);
+}
+.目标结果 .单位 { color: var(--文字-淡); font-size: 13px; }
+.提示 { margin: 0; font-size: 13px; color: var(--文字-淡); }
+.目标结果 .提示 { width: 100%; }
+
+/* ---------- 食谱列表（推荐 / 记录） ---------- */
 .食谱列表 {
   list-style: none;
   margin: 0;
@@ -223,55 +331,51 @@ button {
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid var(--蓝-边框);
-  border-radius: 10px;
-  background: var(--白);
+  border: 1px solid var(--边框);
+  border-radius: var(--圆角-小);
+  background: var(--卡白);
+  transition: border-color var(--动效);
 }
-.食谱项:hover { border-color: var(--蓝-主); }
+.食谱项:hover { border-color: var(--绿-中); }
 
 .菜名 { flex: 1; min-width: 0; }
-.菜名 .名字 { font-weight: 600; }
+.菜名 .名字 { font-weight: 500; }
 .人群标签 {
   display: inline-block;
   font-size: 11px;
   padding: 1px 8px;
   margin-right: 4px;
   border-radius: 999px;
-  background: var(--蓝-浅);
-  color: var(--蓝-深);
+  background: var(--绿-浅);
+  color: var(--绿-深);
 }
 .营养明细 {
   font-size: 12px;
   color: var(--文字-淡);
-  font-variant-numeric: tabular-nums;
 }
 
-.热量 {
-  text-align: right;
-  min-width: 74px;
-  font-variant-numeric: tabular-nums;
-}
-.热量 b { font-size: 17px; color: var(--蓝-深); }
+.热量 { text-align: right; min-width: 74px; }
+.热量 b { font-size: 17px; font-weight: 500; color: var(--绿-深); }
 .热量 small { font-size: 11px; color: var(--文字-淡); }
 
 .加入按钮 {
   padding: 7px 14px;
-  background: var(--蓝-浅);
-  color: var(--蓝-深);
+  background: var(--绿-浅);
+  color: var(--绿-深);
   font-size: 13px;
   white-space: nowrap;
 }
-.加入按钮:hover { background: var(--蓝-主); color: var(--白); }
+.加入按钮:hover { background: var(--绿-主); color: var(--卡白); }
 .移除按钮 {
   padding: 7px 14px;
   background: transparent;
   color: var(--红);
-  border: 1px solid #f0caca;
+  border: 1px solid var(--红-边);
   font-size: 13px;
 }
-.移除按钮:hover { background: #fdf0f0; }
+.移除按钮:hover { background: var(--红-浅); }
 
-/* ---------- 食谱专区：分区导航 ---------- */
+/* ---------- 分区导航（专区 / 训练共用） ---------- */
 .分区导航 {
   display: flex;
   flex-wrap: wrap;
@@ -279,24 +383,20 @@ button {
   margin-bottom: 16px;
 }
 .分区按钮 {
-  padding: 7px 16px;
+  padding: 6px 16px;
   font-size: 13px;
-  background: var(--白);
+  background: var(--卡白);
   color: var(--文字-淡);
-  border: 1px solid var(--蓝-边框);
+  border: 1px solid var(--边框-深);
   border-radius: 999px;
 }
-.分区按钮:hover { border-color: var(--蓝-主); color: var(--蓝-主); }
+.分区按钮:hover { border-color: var(--绿-主); color: var(--绿-主); }
 .分区按钮.选中 {
-  background: var(--蓝-主);
-  border-color: var(--蓝-主);
-  color: var(--白);
+  background: var(--绿-主);
+  border-color: var(--绿-主);
+  color: var(--卡白);
 }
-.分区按钮 .计数 {
-  font-size: 11px;
-  opacity: 0.75;
-  margin-left: 4px;
-}
+.分区按钮 .计数 { font-size: 11px; opacity: 0.75; margin-left: 4px; }
 
 /* ---------- 食谱专区：卡片网格 ---------- */
 .食谱网格 {
@@ -305,19 +405,19 @@ button {
   gap: 12px;
 }
 .食谱卡 {
-  border: 1px solid var(--蓝-边框);
-  border-radius: 10px;
+  border: 1px solid var(--边框);
+  border-radius: var(--圆角-小);
   overflow: hidden;
-  background: var(--白);
+  background: var(--卡白);
   display: flex;
   flex-direction: column;
+  transition: border-color var(--动效);
 }
-.食谱卡:hover { border-color: var(--蓝-主); }
+.食谱卡:hover { border-color: var(--绿-中); }
 
-/* 图片区：有图显示图，无图显示占位 */
 .食谱图 {
-  height: 112px;
-  background: var(--蓝-浅);
+  height: 118px;
+  background: var(--绿-浅);
   position: relative;
   overflow: hidden;
 }
@@ -334,8 +434,8 @@ button {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: var(--蓝-主);
-  background: linear-gradient(135deg, #e8f1fb 0%, #d5e3f3 100%);
+  color: var(--绿-主);
+  background: var(--绿-浅);
 }
 
 .食谱卡内容 {
@@ -345,15 +445,8 @@ button {
   gap: 6px;
   flex: 1;
 }
-.食谱卡 .名字 {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--文字);
-}
-.食谱卡 .营养明细 {
-  font-size: 11.5px;
-  line-height: 1.5;
-}
+.食谱卡 .名字 { font-weight: 500; font-size: 14px; }
+.食谱卡 .营养明细 { font-size: 11.5px; line-height: 1.5; }
 .食谱卡底部 {
   display: flex;
   align-items: center;
@@ -364,7 +457,6 @@ button {
 }
 .食谱卡 .热量 b { font-size: 15px; }
 
-/* 空分区提示 */
 .空分区 {
   padding: 24px;
   text-align: center;
@@ -381,40 +473,37 @@ button {
   margin-bottom: 16px;
 }
 .计划操作 .次按钮 { margin-top: 0; }
-.计划范围说明 {
-  font-size: 12px;
-  color: var(--文字-淡);
-}
+.计划范围说明 { font-size: 12px; color: var(--文字-淡); }
 
-.计划表 {
-  display: grid;
-  gap: 10px;
-}
+.计划表 { display: grid; gap: 10px; }
 .计划日 {
-  border: 1px solid var(--蓝-边框);
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--白);
+  border: 1px solid var(--边框);
+  border-radius: var(--圆角-小);
+  padding: 12px 16px;
+  background: var(--卡白);
 }
+.计划日.今天 { border-color: var(--绿-中); background: #FDFDF8; }
 .计划日头 {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px dashed var(--蓝-浅);
+  cursor: pointer;
+  user-select: none;
 }
-.计划日名 {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--蓝-深);
-}
-.计划日统计 {
-  font-size: 12px;
+.计划日:not(.收起) .计划日头 { border-bottom: 1px dashed var(--绿-边); margin-bottom: 8px; }
+.计划日.收起 .计划餐 { display: none; }
+.计划日.收起 .计划日头 { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.计划日名 { font-weight: 500; font-size: 14px; color: var(--绿-深); }
+.计划日名::after {
+  content: "▾";
+  font-size: 11px;
   color: var(--文字-淡);
-  font-variant-numeric: tabular-nums;
+  margin-left: 6px;
 }
+.计划日.收起 .计划日名::after { content: "▸"; }
+.计划日统计 { font-size: 12px; color: var(--文字-淡); }
 .计划日统计.超额度 { color: var(--红); }
 
 .计划餐 {
@@ -424,41 +513,77 @@ button {
   padding: 6px 0;
   font-size: 13px;
 }
-.计划餐 + .计划餐 { border-top: 1px solid #f1f6fc; }
-.餐次标签 {
-  flex: 0 0 44px;
-  font-size: 11px;
-  color: var(--文字-淡);
-}
+.计划餐 + .计划餐 { border-top: 1px solid #F2F0E7; }
+.餐次标签 { flex: 0 0 44px; font-size: 11px; color: var(--文字-淡); }
 .计划餐 .菜名 { flex: 1; }
-.计划餐 .热量 {
-  font-size: 12px;
-  color: var(--文字-淡);
-  font-variant-numeric: tabular-nums;
+.计划餐 .热量 { font-size: 12px; color: var(--文字-淡); }
+
+/* ---------- 食材与做法详情 ---------- */
+.卡按钮组 { display: flex; align-items: center; gap: 6px; }
+.做法按钮 {
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--绿-主);
+  border: 1px solid var(--绿-边);
+  font-size: 13px;
+  white-space: nowrap;
 }
+.做法按钮:hover,
+.做法按钮.展开 { background: var(--绿-浅); }
+.食谱详情 {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--纸底);
+  border-radius: var(--圆角-小);
+  font-size: 13px;
+}
+.食谱详情[hidden] { display: none; }
+.详情食材 { margin: 0 0 8px; line-height: 1.6; }
+.详情步骤 { margin: 0; padding-left: 20px; }
+.详情步骤 li { margin-bottom: 4px; line-height: 1.5; }
+
+/* ---------- 餐次标记 ---------- */
+.记录餐次 {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  background: var(--绿-浅);
+  color: var(--绿-深);
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.标记已吃按钮 {
+  padding: 4px 10px;
+  background: var(--绿-浅);
+  color: var(--绿-深);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.标记已吃按钮:hover { background: var(--绿-主); color: var(--卡白); }
+.已吃徽章 { font-size: 12px; color: var(--绿-主); white-space: nowrap; }
+#偏差说明 { margin-top: 12px; }
 
 /* ---------- 训练：动作卡片 ---------- */
 .动作网格 {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: 14px;
 }
-
 .动作卡 {
-  border: 1px solid var(--蓝-边框);
-  border-radius: 10px;
+  border: 1px solid var(--边框);
+  border-radius: var(--圆角-小);
   overflow: hidden;
-  background: var(--白);
+  background: var(--卡白);
   display: flex;
   flex-direction: column;
+  transition: border-color var(--动效);
 }
-.动作卡:hover { border-color: var(--蓝-主); }
+.动作卡:hover { border-color: var(--绿-中); }
 
-.动作图 {
-  height: 132px;
-  background: var(--蓝-浅);
-  overflow: hidden;
-}
+.动作图 { height: 140px; background: var(--绿-浅); overflow: hidden; }
 .动作图 img {
   width: 100%;
   height: 100%;
@@ -471,7 +596,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f1fb 0%, #d5e3f3 100%);
+  background: var(--绿-浅);
 }
 
 .动作内容 {
@@ -487,33 +612,29 @@ button {
   justify-content: space-between;
   gap: 8px;
 }
-.动作名 { font-weight: 600; font-size: 15px; color: var(--文字); }
+.动作名 { font-weight: 500; font-size: 15px; }
 .动作建议 {
   font-size: 11px;
-  color: var(--蓝-深);
-  background: var(--蓝-浅);
+  color: var(--绿-深);
+  background: var(--绿-浅);
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
 }
-.动作肌群 {
-  font-size: 12px;
-  color: var(--文字-淡);
-}
+.动作肌群 { font-size: 12px; color: var(--文字-淡); }
 .动作小节标题 {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--蓝-深);
+  font-weight: 500;
+  color: var(--绿-主);
   margin-top: 2px;
 }
 .动作要点 {
   margin: 0;
   padding-left: 18px;
   font-size: 12.5px;
-  color: var(--文字);
   line-height: 1.7;
 }
-.动作要点 li::marker { color: var(--蓝-主); }
+.动作要点 li::marker { color: var(--绿-中); }
 .动作错误 {
   margin: 0;
   padding-left: 18px;
@@ -521,96 +642,55 @@ button {
   color: var(--红);
   line-height: 1.7;
 }
+.动作错误 li::marker { color: var(--红); }
 
-/* ---------- 训练：安全说明卡片 ---------- */
-.提示卡片 {
-  background: #fdfbf5;
-  border-color: #f0e4c8;
-}
-.提示卡片 h2 { color: #8a6d1f; border-bottom-color: #f0e4c8; }
+/* ---------- 训练：安全说明 ---------- */
+.提示卡片 { background: var(--黄-底); border-color: var(--黄-边); }
+.提示卡片 h2 { color: var(--黄-字); border-bottom-color: var(--黄-边); }
 .安全列表 {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
-  color: #5c5033;
+  color: #5C5033;
   line-height: 1.8;
 }
-.安全列表 li::marker { color: #b8860b; }
+.安全列表 li::marker { color: var(--黄-字); }
 
 /* ---------- 页脚 ---------- */
 .页脚 {
   text-align: center;
   font-size: 12px;
   color: var(--文字-淡);
-  padding: 0 16px 32px;
+  padding: 0 16px 36px;
 }
 .页脚 p { margin: 0; }
 .页脚 .版权 { margin-top: 6px; font-size: 11px; opacity: 0.8; }
-.页脚 a { color: var(--蓝-主); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  .饮食布局 { grid-template-columns: 1fr; }
+  .今日数字 strong { font-size: 38px; }
+}
 
 @media (max-width: 560px) {
+  .顶栏内容 { gap: 10px; padding: 8px 14px; }
+  .副标题 { display: none; }
+  .顶栏目标 { display: none; }
+  .容器 { padding: 16px 14px 44px; }
+  .今日卡片 { padding: 18px; }
   .食谱项 { flex-wrap: wrap; }
   .热量 { min-width: 0; text-align: left; }
   .食谱网格 { grid-template-columns: 1fr 1fr; }
-  .食谱图 { height: 90px; }
+  .食谱图 { height: 92px; }
   .动作网格 { grid-template-columns: 1fr; }
-  .主导航按钮 { padding: 8px 18px; font-size: 13px; }
+  .表单网格 { grid-template-columns: 1fr 1fr; }
 }
 
-/* ---------- v0.2 新增：食材与做法详情 ---------- */
-.卡按钮组 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* ---------- 动效降级 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  html { scroll-behavior: auto; }
 }
-.做法按钮 {
-  padding: 7px 12px;
-  background: transparent;
-  color: var(--蓝-主);
-  border: 1px solid var(--蓝-边框);
-  font-size: 13px;
-  white-space: nowrap;
-}
-.做法按钮:hover,
-.做法按钮.展开 { background: var(--蓝-浅); }
-.食谱详情 {
-  margin-top: 10px;
-  padding: 12px 14px;
-  background: var(--蓝-浅);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--文字);
-}
-.食谱详情[hidden] { display: none; }
-.详情食材 { margin: 0 0 8px; line-height: 1.6; }
-.详情步骤 { margin: 0; padding-left: 20px; }
-.详情步骤 li { margin-bottom: 4px; line-height: 1.5; }
-
-/* ---------- v0.2 新增：今日记录的餐次标记 ---------- */
-.记录餐次 {
-  display: inline-block;
-  margin-right: 6px;
-  padding: 1px 7px;
-  background: var(--蓝-浅);
-  color: var(--蓝-深);
-  border-radius: 999px;
-  font-size: 11px;
-}
-
-/* ---------- v0.2 新增：一周计划的「标记已吃」 ---------- */
-.标记已吃按钮 {
-  padding: 4px 10px;
-  background: var(--蓝-浅);
-  color: var(--蓝-深);
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.标记已吃按钮:hover { background: var(--蓝-主); color: var(--白); }
-.已吃徽章 {
-  font-size: 12px;
-  color: var(--绿);
-  white-space: nowrap;
-}
-#偏差说明 { margin-top: 12px; }

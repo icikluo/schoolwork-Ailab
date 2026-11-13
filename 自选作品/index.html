@@ -9,13 +9,19 @@
 <body>
 
   <header class="顶栏">
-    <h1>食谱搭配</h1>
-    <p class="副标题">吃与练 · 按人群推荐食物，按部位学习动作</p>
-    <!-- 主功能分区导航 -->
-    <nav class="主导航" id="主导航" role="tablist">
-      <button type="button" class="主导航按钮 选中" data-分区="饮食" role="tab">🥗 饮食</button>
-      <button type="button" class="主导航按钮" data-分区="训练" role="tab">💪 训练</button>
-    </nav>
+    <div class="顶栏内容">
+      <div class="站名组">
+        <h1>食谱搭配</h1>
+        <span class="副标题">吃练一体</span>
+      </div>
+
+      <nav class="主导航" id="主导航" role="tablist" aria-label="主功能分区">
+        <button type="button" class="主导航按钮 选中" data-分区="饮食" role="tab">饮食</button>
+        <button type="button" class="主导航按钮" data-分区="训练" role="tab">训练</button>
+      </nav>
+
+      <div class="顶栏目标">目标 <b id="顶栏目标">—</b> <small>kcal</small></div>
+    </div>
   </header>
 
   <main class="容器">
@@ -23,60 +29,20 @@
     <!-- ==================== 饮食分区 ==================== -->
     <div class="功能区" id="分区-饮食">
 
-      <!-- ① 设置目标 -->
-      <section class="卡片" id="设置卡片">
-        <h2>① 设置每日目标</h2>
-        <form id="设置表单" class="表单网格">
-          <label>性别
-            <select id="性别">
-              <option value="男">男</option>
-              <option value="女">女</option>
-            </select>
-          </label>
-          <label>年龄（岁）
-            <input id="年龄" type="number" min="10" max="100" value="22" required>
-          </label>
-          <label>身高（cm）
-            <input id="身高" type="number" min="100" max="250" step="0.1" value="165" required>
-          </label>
-          <label>体重（kg）
-            <input id="体重" type="number" min="25" max="200" step="0.1" value="55" required>
-          </label>
-          <label>活动量
-            <select id="活动量">
-              <option value="1.2">久坐（几乎不运动）</option>
-              <option value="1.375">轻度（每周1–3次）</option>
-              <option value="1.55">中度（每周3–5次）</option>
-              <option value="1.725">高度（每周6–7次）</option>
-            </select>
-          </label>
-          <label>人群
-            <select id="人群">
-              <option value="减脂">减脂</option>
-              <option value="增肌">增肌</option>
-              <option value="控糖">控糖</option>
-              <option value="均衡">均衡</option>
-            </select>
-          </label>
-          <button type="submit" class="主按钮">计算目标</button>
-        </form>
-
-        <div class="目标结果" id="目标结果" hidden>
-          <span class="标签">每日目标卡路里</span>
-          <strong id="目标值">—</strong>
-          <span class="单位">kcal</span>
-          <p class="提示" id="目标提示"></p>
+      <!-- 今日摄入：首屏主视觉 -->
+      <section class="卡片 今日卡片" id="进度卡片">
+        <div class="今日头">
+          <h2>今日摄入</h2>
+          <span class="今日日期" id="今日日期"></span>
         </div>
-      </section>
-
-      <!-- ② 今日摄入 -->
-      <section class="卡片" id="进度卡片">
-        <h2>② 今日摄入</h2>
+        <div class="今日数字">
+          <strong id="已摄入">0</strong>
+          <span class="今日对照" id="目标对照">/ 目标 —</span>
+        </div>
         <div class="进度条" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="进度条外框">
           <div class="进度填充" id="进度填充"></div>
         </div>
         <div class="营养概览" id="营养概览">
-          <div class="营养项"><span>卡路里</span><b id="已摄入">0</b><small id="目标对照">/ 目标 —</small></div>
           <div class="营养项"><span>碳水</span><b id="总碳水">0</b><small id="碳水目标">g</small></div>
           <div class="营养项"><span>脂肪</span><b id="总脂肪">0</b><small id="脂肪目标">g</small></div>
           <div class="营养项"><span>膳食纤维</span><b id="总纤维">0</b><small>g</small></div>
@@ -84,41 +50,101 @@
         </div>
       </section>
 
-      <!-- ③ 今日推荐 -->
-      <section class="卡片" id="推荐卡片">
-        <h2>③ 为你推荐</h2>
-        <p class="提示" id="推荐说明">设置目标后开始推荐</p>
-        <ul class="食谱列表" id="推荐列表"></ul>
-      </section>
+      <div class="饮食布局">
 
-      <!-- ④ 食谱专区 -->
-      <section class="卡片" id="专区卡片">
-        <h2>④ 食谱专区</h2>
-        <p class="提示" id="专区说明">按人群分类浏览全部食谱，点「做法」查看食材与步骤，点「记录」加入今天。</p>
-        <div class="分区导航" id="分区导航" role="tablist"></div>
-        <div class="分区内容" id="分区内容"></div>
-      </section>
+        <!-- 左栏：目标设置（低频，可折叠）+ 今日记录 -->
+        <aside class="左栏">
 
-      <!-- ⑤ 一周计划 -->
-      <section class="卡片" id="计划卡片">
-        <h2>⑤ 一周食谱计划</h2>
-        <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
-        <div class="计划操作">
-          <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
-          <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
-          <span class="提示" id="计划范围说明"></span>
+          <section class="卡片" id="设置卡片">
+            <div class="卡片头">
+              <h2>我的目标</h2>
+              <button type="button" class="文字按钮" id="设置开关">修改</button>
+            </div>
+            <p class="设置摘要" id="设置摘要">先填身体数据，算出每日目标。</p>
+            <div class="设置主体" id="设置主体">
+              <form id="设置表单" class="表单网格">
+                <label>性别
+                  <select id="性别">
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                  </select>
+                </label>
+                <label>年龄（岁）
+                  <input id="年龄" type="number" min="10" max="100" value="22" required>
+                </label>
+                <label>身高（cm）
+                  <input id="身高" type="number" min="100" max="250" step="0.1" value="165" required>
+                </label>
+                <label>体重（kg）
+                  <input id="体重" type="number" min="25" max="200" step="0.1" value="55" required>
+                </label>
+                <label>活动量
+                  <select id="活动量">
+                    <option value="1.2">久坐（几乎不运动）</option>
+                    <option value="1.375">轻度（每周1–3次）</option>
+                    <option value="1.55">中度（每周3–5次）</option>
+                    <option value="1.725">高度（每周6–7次）</option>
+                  </select>
+                </label>
+                <label>人群
+                  <select id="人群">
+                    <option value="减脂">减脂</option>
+                    <option value="增肌">增肌</option>
+                    <option value="控糖">控糖</option>
+                    <option value="均衡">均衡</option>
+                  </select>
+                </label>
+                <button type="submit" class="主按钮">计算目标</button>
+              </form>
+
+              <div class="目标结果" id="目标结果" hidden>
+                <span class="标签">每日目标卡路里</span>
+                <strong id="目标值">—</strong>
+                <span class="单位">kcal</span>
+                <p class="提示" id="目标提示"></p>
+              </div>
+            </div>
+          </section>
+
+          <section class="卡片" id="记录卡片">
+            <h2>今日已记录</h2>
+            <ul class="食谱列表" id="记录列表"></ul>
+            <p class="提示" id="记录空提示">今天还没有记录，从推荐或食谱专区挑一道菜吧。</p>
+            <button type="button" class="次按钮" id="清空按钮">清空今日记录</button>
+          </section>
+
+        </aside>
+
+        <!-- 右栏：推荐 / 食谱专区 / 一周计划 -->
+        <div class="右栏">
+
+          <section class="卡片" id="推荐卡片">
+            <h2>为你推荐</h2>
+            <p class="提示" id="推荐说明">设置目标后开始推荐</p>
+            <ul class="食谱列表" id="推荐列表"></ul>
+          </section>
+
+          <section class="卡片" id="专区卡片">
+            <h2>食谱专区</h2>
+            <p class="提示" id="专区说明">按人群分类浏览全部食谱，点「做法」查看食材与步骤，点「记录」加入今天。</p>
+            <div class="分区导航" id="分区导航" role="tablist"></div>
+            <div class="分区内容" id="分区内容"></div>
+          </section>
+
+          <section class="卡片" id="计划卡片">
+            <h2>一周食谱计划</h2>
+            <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
+            <div class="计划操作">
+              <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
+              <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
+              <span class="提示" id="计划范围说明"></span>
+            </div>
+            <div id="计划结果"></div>
+            <p class="提示" id="偏差说明" hidden></p>
+          </section>
+
         </div>
-        <div id="计划结果"></div>
-        <p class="提示" id="偏差说明" hidden></p>
-      </section>
-
-      <!-- 今日已记录 -->
-      <section class="卡片" id="记录卡片">
-        <h2>今日已记录</h2>
-        <ul class="食谱列表" id="记录列表"></ul>
-        <p class="提示" id="记录空提示">今天还没有记录，从上方挑一道菜吧。</p>
-        <button type="button" class="次按钮" id="清空按钮">清空今日记录</button>
-      </section>
+      </div>
 
     </div>
 
