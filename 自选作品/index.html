@@ -39,6 +39,9 @@
           <strong id="已摄入">0</strong>
           <span class="今日对照" id="目标对照">/ 目标 —</span>
         </div>
+        <p class="提示 今日引导" id="今日引导" hidden>
+          还没有设置目标：在左栏「我的目标」填好身体数据，算出今天的额度。
+        </p>
         <div class="进度条" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="进度条外框">
           <div class="进度填充" id="进度填充"></div>
         </div>
@@ -113,20 +116,36 @@
             <button type="button" class="次按钮" id="清空按钮">清空今日记录</button>
           </section>
 
+          <section class="卡片" id="历史卡片">
+            <h2>近 7 天记录</h2>
+            <div id="历史内容"></div>
+            <p class="提示" id="历史空提示">还没有往日记录，只保留最近 7 天。</p>
+          </section>
+
         </aside>
 
         <!-- 右栏：推荐 / 食谱专区 / 一周计划 -->
         <div class="右栏">
 
           <section class="卡片" id="推荐卡片">
-            <h2>为你推荐</h2>
+            <div class="卡片头">
+              <h2>为你推荐</h2>
+              <button type="button" class="文字按钮" id="换一批按钮">换一批</button>
+            </div>
             <p class="提示" id="推荐说明">设置目标后开始推荐</p>
             <ul class="食谱列表" id="推荐列表"></ul>
           </section>
 
           <section class="卡片" id="专区卡片">
             <h2>食谱专区</h2>
-            <p class="提示" id="专区说明">按人群分类浏览全部食谱，点「做法」查看食材与步骤，点「记录」加入今天。</p>
+            <div class="专区工具行">
+              <input id="搜索输入" type="search" placeholder="搜索菜名…" aria-label="搜索菜名">
+              <select id="排序选择" aria-label="排序方式">
+                <option value="默认">默认排序</option>
+                <option value="热量升">热量低 → 高</option>
+                <option value="热量降">热量高 → 低</option>
+              </select>
+            </div>
             <div class="分区导航" id="分区导航" role="tablist"></div>
             <div class="分区内容" id="分区内容"></div>
           </section>

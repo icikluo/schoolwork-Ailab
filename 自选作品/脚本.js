@@ -26,6 +26,15 @@
   };
   var 营养字段 = ["卡路里", "碳水", "脂肪", "膳食纤维", "蛋白质"];
 
+  // 功能增强（v0.4.1）
+  var 食谱分区键 = "食谱搭配-食谱分区";   // 专区上次选择的分区
+  var 历史存储键 = "食谱搭配-历史记录";   // 近 7 天记录（纯文字回看）
+  var 记录日期键 = "食谱搭配-记录日期";   // 今日记录对应的日期戳
+  var 历史保留天数 = 7;
+  var 推荐偏移 = 0;             // 「换一批」在排序候选里的起点
+  var 当前搜索词 = "";          // 食谱专区搜索
+  var 当前排序 = "默认";        // 食谱专区排序
+
   // 宏量营养目标供能比（借鉴 CookHero 的目标管理，按人群给三项目标）
   // 蛋白质 / 脂肪 / 碳水 三项供能比之和为 1
   var 宏量供能比 = {
@@ -61,6 +70,28 @@
 
   function 保留一位小数(x) {
     return Math.round(x * 10) / 10;
+  }
+
+  // 份量折算：整份（1）或半份（0.5），卡路里取整、克数保留 1 位小数
+  function 折算份量(菜, 份量) {
+    份量 = 份量 === 0.5 ? 0.5 : 1;
+    return {
+      卡路里: Math.round(菜.卡路里 * 份量),
+      碳水: 保留一位小数(菜.碳水 * 份量),
+      脂肪: 保留一位小数(菜.脂肪 * 份量),
+      膳食纤维: 保留一位小数(菜.膳食纤维 * 份量),
+      蛋白质: 保留一位小数(菜.蛋白质 * 份量)
+    };
+  }
+
+  // 「换一批」用：从排序后的候选里按偏移循环取一段（到尾自动回到开头）
+  function 按偏移取段(列表, 偏移, 数量) {
+    if (!列表.length) return [];
+    var 段 = [];
+    for (var i = 0; i < 数量; i++) {
+      段.push(列表[(偏移 + i) % 列表.length]);
+    }
+    return 段;
   }
 
   // ============ 目标卡路里三步计算 ============
@@ -149,13 +180,14 @@
   //   2) 根据剩余卡路里额度，优先选择接近额度一半的（早中晚各一道）
   //   3) 已记录过的今天不再重复推荐
   //   4) 额度不足时提示，不再硬推
-  function 生成推荐(人群, 剩余卡路里, 已记录ids) {
+  //   5) 偏移用于「换一批」：同一排序里往后翻 3 道，到尾回绕
+  function 生成推荐(人群, 剩余卡路里, 已记录ids, 偏移) {
     var 候选 = window.食谱数据.filter(function (菜) {
       return 菜.人群.indexOf(人群) !== -1 && 已记录ids.indexOf(菜.id) === -1;
     });
 
     if (剩余卡路里 <= 100) {
-      return { 列表: [], 说明: "今日已达目标额度，明天再吃吧。" };
+      return { 列表: [], 说明: "今日已达目标额度，明天再吃吧。", 候选数: 0 };
     }
 
     // 每餐预算 ≈ 剩余 / 3，在预算 60%~140% 之间优先
@@ -175,13 +207,13 @@
       return 计算得分(a) - 计算得分(b);
     });
 
-    var 列表 = 候选.slice(0, 推荐数量);
+    var 列表 = 按偏移取段(候选, 偏移 || 0, 推荐数量);
     var 说明 = "按「" + 人群 + "」优先" + 推荐优先级[人群] + "，结合剩余 " +
       剩余卡路里 + " kcal 挑出以下 " + 列表.length + " 道。";
     if (候选.length === 0) {
       说明 = "今天的食谱都记录过了，明天可以换个吃法。";
     }
-    return { 列表: 列表, 说明: 说明 };
+    return { 列表: 列表, 说明: 说明, 候选数: 候选.length };
   }
 
   // ============ 渲染 ============
@@ -202,7 +234,8 @@
 
     var 名字 = document.createElement("div");
     名字.className = "名字";
-    名字.textContent = 菜.名称;
+    // 半份记录在菜名后标注，直观看出这不是整份的营养
+    名字.textContent = 菜.名称 + (菜.份量 === 0.5 ? "（半份）" : "");
     菜名盒.appendChild(名字);
 
     var 标签行 = document.createElement("div");
@@ -227,12 +260,16 @@
     li.appendChild(热量盒);
 
     if (按钮区 === "加入") {
+      // 份量选择：整份 / 半份，记录时按比例折算营养
+      var 份量选择 = 创建份量选择(菜.名称);
+      li.appendChild(份量选择);
+
       var 加入 = document.createElement("button");
       加入.type = "button";
       加入.className = "加入按钮";
       加入.textContent = "记录";
       加入.addEventListener("click", function () {
-        添加记录(菜);
+        添加记录(菜, null, Number(份量选择.value));
       });
       li.appendChild(加入);
     } else if (按钮区 === "移除") {
@@ -241,7 +278,7 @@
       移除.className = "移除按钮";
       移除.textContent = "移除";
       移除.addEventListener("click", function () {
-        移除记录(菜.id);
+        移除记录(菜);
       });
       li.appendChild(移除);
     }
@@ -256,8 +293,23 @@
     });
   }
 
-  // ============ 食谱专区：按人群分区 ============
+  // 整份 / 半份下拉（搜索结果与推荐行共用）
+  function 创建份量选择(菜名) {
+    var 选择 = document.createElement("select");
+    选择.className = "份量选择";
+    选择.setAttribute("aria-label", 菜名 + " 份量");
+    [["1", "整份"], ["0.5", "半份"]].forEach(function (项) {
+      var 选项 = document.createElement("option");
+      选项.value = 项[0];
+      选项.textContent = 项[1];
+      选择.appendChild(选项);
+    });
+    return 选择;
+  }
+
+  // ============ 食谱专区：按人群分区 + 搜索 + 排序 ============
   var 当前分区 = "全部";
+  var 合法分区 = ["全部", "减脂", "增肌", "控糖", "均衡"];
 
   function 分区列表() {
     var 分区 = ["全部"].concat(Object.keys(人群系数));
@@ -364,12 +416,15 @@
       按钮组.appendChild(做法按钮);
     }
 
+    var 份量选择 = 创建份量选择(菜.名称);
+    按钮组.appendChild(份量选择);
+
     var 按钮 = document.createElement("button");
     按钮.type = "button";
     按钮.className = "加入按钮";
     按钮.textContent = "记录";
     按钮.addEventListener("click", function () {
-      添加记录(菜);
+      添加记录(菜, null, Number(份量选择.value));
     });
     按钮组.appendChild(按钮);
 
@@ -405,6 +460,9 @@
       按钮.innerHTML = 项.名称 + '<span class="计数">' + 项.数量 + "</span>";
       按钮.addEventListener("click", function () {
         当前分区 = 项.名称;
+        try {
+          localStorage.setItem(食谱分区键, 项.名称);   // 记住上次分区
+        } catch (e) { /* 隐私模式忽略 */ }
         渲染专区();
       });
       导航.appendChild(按钮);
@@ -418,14 +476,35 @@
       : window.食谱数据.filter(function (菜) {
           return 菜.人群.indexOf(当前分区) !== -1;
         });
-    待显示.sort(function (a, b) {
-      return a.id.localeCompare(b.id);
-    });
+
+    // 关键词过滤（按菜名包含匹配）
+    if (当前搜索词) {
+      待显示 = 待显示.filter(function (菜) {
+        return 菜.名称.indexOf(当前搜索词) !== -1;
+      });
+    }
+
+    // 排序：默认按 id；热量升 / 降按卡路里，同热量按 id 稳定排序
+    if (当前排序 === "热量升") {
+      待显示.sort(function (a, b) {
+        return a.卡路里 - b.卡路里 || a.id.localeCompare(b.id);
+      });
+    } else if (当前排序 === "热量降") {
+      待显示.sort(function (a, b) {
+        return b.卡路里 - a.卡路里 || a.id.localeCompare(b.id);
+      });
+    } else {
+      待显示.sort(function (a, b) {
+        return a.id.localeCompare(b.id);
+      });
+    }
 
     if (待显示.length === 0) {
       var 空 = document.createElement("p");
       空.className = "空分区";
-      空.textContent = "这个分类下暂时还没有食谱。";
+      空.textContent = 当前搜索词
+        ? "没有找到「" + 当前搜索词 + "」相关的菜，换个关键词或分区试试。"
+        : "这个分类下暂时还没有食谱。";
       内容.appendChild(空);
       return;
     }
@@ -726,6 +805,9 @@
     取元素("脂肪目标").textContent = 宏量 ? "g / 目标 " + 宏量.脂肪 : "g";
     取元素("蛋白目标").textContent = 宏量 ? "g / 目标 " + 宏量.蛋白质 : "g";
 
+    // 空状态引导：没设目标时给一句去哪设置的指引
+    取元素("今日引导").hidden = 目标值 !== null;
+
     return { 合计: 合计, 目标值: 目标值 };
   }
 
@@ -737,47 +819,177 @@
     if (!目标) {
       说明.textContent = "设置目标后开始推荐";
       取元素("推荐列表").innerHTML = "";
+      取元素("换一批按钮").disabled = true;
       return;
     }
 
     var 营养 = 汇总营养(记录);
     var 剩余 = Math.max(目标.目标 - 营养.卡路里, 0);
     var 已记录ids = 记录.map(function (菜) { return 菜.id; });
-    var 结果 = 生成推荐(目标.人群, 剩余, 已记录ids);
+    var 结果 = 生成推荐(目标.人群, 剩余, 已记录ids, 推荐偏移);
 
     说明.textContent = 结果.说明;
+    // 候选不够 3 道时「换一批」翻不出新内容，直接禁用
+    取元素("换一批按钮").disabled = 结果.候选数 <= 推荐数量;
     渲染列表("推荐列表", 结果.列表, "加入");
   }
 
   function 刷新所有() {
+    推荐偏移 = 0;   // 记录或目标变了，推荐从头排
     渲染进度();
     渲染记录();
     渲染推荐();
   }
 
   // ============ 事件 ============
-  function 添加记录(菜, 指定餐次) {
+  // 添加记录：份量（整份 1 / 半份 0.5）按比例折算营养；
+  // 记录id 为每条记录的唯一键，同一道菜记两次也能分别移除。
+  function 添加记录(菜, 指定餐次, 份量) {
     var 记录 = 读记录();
+    var 营养 = 折算份量(菜, 份量);
     记录.push({
+      记录id: Date.now() + "-" + Math.floor(Math.random() * 10000),
       id: 菜.id,
       名称: 菜.名称,
       人群: 菜.人群.slice(),
-      卡路里: 菜.卡路里,
-      碳水: 菜.碳水,
-      脂肪: 菜.脂肪,
-      膳食纤维: 菜.膳食纤维,
-      蛋白质: 菜.蛋白质,
+      卡路里: 营养.卡路里,
+      碳水: 营养.碳水,
+      脂肪: 营养.脂肪,
+      膳食纤维: 营养.膳食纤维,
+      蛋白质: 营养.蛋白质,
+      份量: 份量 === 0.5 ? 0.5 : 1,
       餐次: 指定餐次 || 判定餐次()
     });
     写记录(记录);
     刷新所有();
   }
 
-  function 移除记录(id) {
+  // 移除记录：优先按唯一键 记录id 删单条；旧存档没有 记录id 时回退按菜品 id 删
+  function 移除记录(条目) {
     var 记录 = 读记录();
-    记录 = 记录.filter(function (条目) { return 条目.id !== id; });
+    if (条目.记录id) {
+      记录 = 记录.filter(function (t) { return t.记录id !== 条目.记录id; });
+    } else {
+      记录 = 记录.filter(function (t) { return t.id !== 条目.id; });
+    }
     写记录(记录);
     刷新所有();
+  }
+
+  // ============ 近 7 天记录（纯文字回看，不做图表） ============
+  function 今日日期串() {
+    var d = new Date();
+    return d.getFullYear() + "-" +
+      ("0" + (d.getMonth() + 1)).slice(-2) + "-" +
+      ("0" + d.getDate()).slice(-2);
+  }
+
+  function 读历史() {
+    try {
+      var 原文 = localStorage.getItem(历史存储键);
+      var 历史 = 原文 ? JSON.parse(原文) : {};
+      return 历史 && typeof 历史 === "object" ? 历史 : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function 写历史(历史) {
+    localStorage.setItem(历史存储键, JSON.stringify(历史));
+  }
+
+  // 只保留最近 N 天（日期字符串排序即时间序）
+  function 截断历史(历史, 天数) {
+    var 键集 = Object.keys(历史).sort();
+    while (键集.length > 天数) {
+      delete 历史[键集.shift()];
+    }
+    return 历史;
+  }
+
+  // 换天结转：上次记录的日期不是今天 → 把当时的今日记录存入历史并清空
+  function 结转历史() {
+    var 今日 = 今日日期串();
+    var 存日期 = null;
+    try {
+      存日期 = localStorage.getItem(记录日期键);
+    } catch (e) { /* 忽略 */ }
+
+    if (!存日期) {
+      // 旧版本存档没有日期戳：视为今天的记录，不结转，只补日期
+      try { localStorage.setItem(记录日期键, 今日); } catch (e) { /* 忽略 */ }
+      return;
+    }
+    if (存日期 === 今日) return;
+
+    var 记录 = 读记录();
+    if (记录.length > 0) {
+      var 历史 = 读历史();
+      历史[存日期] = 记录;
+      写历史(截断历史(历史, 历史保留天数));
+    }
+    写记录([]);
+    try { localStorage.setItem(记录日期键, 今日); } catch (e) { /* 忽略 */ }
+  }
+
+  function 渲染历史() {
+    var 容器 = 取元素("历史内容");
+    容器.innerHTML = "";
+    var 历史 = 读历史();
+    var 日期集 = Object.keys(历史).sort().reverse();   // 最近在前
+
+    取元素("历史空提示").hidden = 日期集.length > 0;
+
+    日期集.forEach(function (日期) {
+      var 条目 = 历史[日期];
+      var 合计 = 汇总营养(条目);
+      var 部 = 日期.split("-");
+
+      var 日块 = document.createElement("div");
+      日块.className = "历史日 收起";
+
+      var 头 = document.createElement("div");
+      头.className = "历史日头";
+      头.addEventListener("click", function () {
+        日块.classList.toggle("收起");
+      });
+
+      var 名 = document.createElement("span");
+      名.className = "历史日名";
+      名.textContent = Number(部[1]) + " 月 " + Number(部[2]) + " 日";
+
+      var 统计 = document.createElement("span");
+      统计.className = "历史日统计";
+      统计.textContent = 条目.length + " 条 · " + 合计.卡路里 + " kcal";
+
+      头.appendChild(名);
+      头.appendChild(统计);
+      日块.appendChild(头);
+
+      条目.forEach(function (条) {
+        var 行 = document.createElement("div");
+        行.className = "历史条目";
+
+        var 餐次 = document.createElement("span");
+        餐次.className = "餐次标签";
+        餐次.textContent = 条.餐次 || "·";
+
+        var 菜名 = document.createElement("span");
+        菜名.className = "菜名";
+        菜名.textContent = 条.名称 + (条.份量 === 0.5 ? "（半份）" : "");
+
+        var 热量 = document.createElement("span");
+        热量.className = "热量";
+        热量.textContent = 条.卡路里 + " kcal";
+
+        行.appendChild(餐次);
+        行.appendChild(菜名);
+        行.appendChild(热量);
+        日块.appendChild(行);
+      });
+
+      容器.appendChild(日块);
+    });
   }
 
   // 设置卡片：折叠交互（目标设好后收起表单，只留摘要，低频操作不占首屏）
@@ -1053,6 +1265,9 @@
     var 目标 = 读目标();
     回填目标表单(目标);
 
+    // 换天结转：把昨天的记录存进历史，今天从空记录开始（近 7 天可回看）
+    结转历史();
+
     if (目标) {
       // 用当前系数重新计算并回写，保证顶部目标与"今日摄入"用的是同一个值。
       // 否则改了 人群系数 后刷新页面，顶部按新代码算、进度栏读旧存档，两处数字会打架。
@@ -1087,9 +1302,28 @@
     取元素("生成计划按钮").addEventListener("click", 生成计划);
     取元素("清空计划按钮").addEventListener("click", 清除计划);
 
+    // 功能增强：换一批 / 搜索 / 排序 / 分区记忆
+    取元素("换一批按钮").addEventListener("click", function () {
+      推荐偏移 += 推荐数量;
+      渲染推荐();
+    });
+    取元素("搜索输入").addEventListener("input", function () {
+      当前搜索词 = this.value.trim();
+      渲染专区();
+    });
+    取元素("排序选择").addEventListener("change", function () {
+      当前排序 = this.value;
+      渲染专区();
+    });
+    try {
+      var 存分区 = localStorage.getItem(食谱分区键);
+      if (合法分区.indexOf(存分区) !== -1) 当前分区 = 存分区;
+    } catch (e) { /* 忽略 */ }
+
     渲染专区();
     渲染计划();
     渲染动作();
+    渲染历史();
     刷新所有();
     初始化主分区();
   }
@@ -1104,6 +1338,9 @@
     判定餐次: 判定餐次,
     汇总营养: 汇总营养,
     生成推荐: 生成推荐,
+    按偏移取段: 按偏移取段,
+    折算份量: 折算份量,
+    截断历史: 截断历史,
     生成一周计划: 生成一周计划,
     计划天数: 计划天数,
     动作部位: 动作部位

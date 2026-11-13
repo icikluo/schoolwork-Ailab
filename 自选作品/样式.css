@@ -566,6 +566,62 @@ button {
 .已吃徽章 { font-size: 12px; color: var(--绿-主); white-space: nowrap; }
 #偏差说明 { margin-top: 12px; }
 
+/* ---------- 功能增强（v0.4.1） ---------- */
+.今日引导 { margin-top: 10px; }
+
+.专区工具行 {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.专区工具行 input { flex: 1; min-width: 0; }
+.专区工具行 select { flex: none; }
+
+.份量选择 {
+  padding: 5px 6px;
+  font-size: 12px;
+  width: auto;
+  border-radius: 7px;
+}
+.食谱项 .份量选择 { flex: none; }
+
+/* ---------- 近 7 天记录 ---------- */
+.历史日 {
+  border: 1px solid var(--边框);
+  border-radius: var(--圆角-小);
+  padding: 10px 14px;
+  background: var(--卡白);
+}
+.历史日 + .历史日 { margin-top: 8px; }
+.历史日头 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.历史日名 { font-size: 13px; font-weight: 500; color: var(--绿-深); }
+.历史日名::after {
+  content: "▾";
+  font-size: 11px;
+  color: var(--文字-淡);
+  margin-left: 6px;
+}
+.历史日.收起 .历史日名::after { content: "▸"; }
+.历史日统计 { font-size: 12px; color: var(--文字-淡); }
+.历史日.收起 .历史条目 { display: none; }
+.历史条目 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-top: 1px solid #F2F0E7;
+}
+.历史条目 .菜名 { flex: 1; min-width: 0; font-size: 13px; }
+.历史条目 .热量 { font-size: 12px; color: var(--文字-淡); }
+
 /* ---------- 训练：动作卡片 ---------- */
 .动作网格 {
   display: grid;
