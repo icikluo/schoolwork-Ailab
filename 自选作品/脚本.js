@@ -26,6 +26,34 @@
   };
   var 营养字段 = ["卡路里", "碳水", "脂肪", "膳食纤维", "蛋白质"];
 
+  // 宏量营养目标供能比（借鉴 CookHero 的目标管理，按人群给三项目标）
+  // 蛋白质 / 脂肪 / 碳水 三项供能比之和为 1
+  var 宏量供能比 = {
+    减脂: { 蛋白质: 0.30, 脂肪: 0.25, 碳水: 0.45 },
+    增肌: { 蛋白质: 0.25, 脂肪: 0.25, 碳水: 0.50 },
+    控糖: { 蛋白质: 0.25, 脂肪: 0.35, 碳水: 0.40 },
+    均衡: { 蛋白质: 0.20, 脂肪: 0.30, 碳水: 0.50 }
+  };
+  var 供能系数 = { 蛋白质: 4, 脂肪: 9, 碳水: 4 };  // 每克供能 kcal
+
+  function 计算宏量目标(目标卡路里, 人群) {
+    var 比 = 宏量供能比[人群] || 宏量供能比["均衡"];
+    var 结果 = {};
+    ["蛋白质", "脂肪", "碳水"].forEach(function (字段) {
+      结果[字段] = Math.round(目标卡路里 * 比[字段] / 供能系数[字段]);
+    });
+    return 结果;
+  }
+
+  // 按当前时间自动归入餐次（早 / 午 / 晚 / 加餐）
+  function 判定餐次(时刻) {
+    var 小时 = (时刻 || new Date()).getHours();
+    if (小时 < 10) return "早";
+    if (小时 < 15) return "午";
+    if (小时 < 21) return "晚";
+    return "加餐";
+  }
+
   // ============ 工具 ============
   function 取元素(id) {
     return document.getElementById(id);
@@ -164,6 +192,14 @@
     var 菜名盒 = document.createElement("div");
     菜名盒.className = "菜名";
 
+    // 今日已记录列表：显示该条属于哪一餐（早 / 午 / 晚 / 加餐）
+    if (按钮区 === "移除" && 菜.餐次) {
+      var 餐次标记 = document.createElement("span");
+      餐次标记.className = "记录餐次";
+      餐次标记.textContent = 菜.餐次;
+      菜名盒.appendChild(餐次标记);
+    }
+
     var 名字 = document.createElement("div");
     名字.className = "名字";
     名字.textContent = 菜.名称;
@@ -280,6 +316,28 @@
       "g · 膳食纤维 " + 菜.膳食纤维.toFixed(1) + "g · 蛋白质 " + 菜.蛋白质.toFixed(1) + "g";
     内容.appendChild(明细);
 
+    // 食材与做法详情（默认收起，点「做法」展开）
+    var 详情 = document.createElement("div");
+    详情.className = "食谱详情";
+    详情.hidden = true;
+    if (菜.食材) {
+      var 食材行 = document.createElement("p");
+      食材行.className = "详情食材";
+      食材行.textContent = "食材：" + 菜.食材;
+      详情.appendChild(食材行);
+    }
+    if (菜.步骤 && 菜.步骤.length) {
+      var 步骤表 = document.createElement("ol");
+      步骤表.className = "详情步骤";
+      菜.步骤.forEach(function (一步) {
+        var li = document.createElement("li");
+        li.textContent = 一步;
+        步骤表.appendChild(li);
+      });
+      详情.appendChild(步骤表);
+    }
+    内容.appendChild(详情);
+
     var 底部 = document.createElement("div");
     底部.className = "食谱卡底部";
 
@@ -288,6 +346,24 @@
     热量盒.innerHTML = "<b>" + 菜.卡路里 + "</b> <small>kcal</small>";
     底部.appendChild(热量盒);
 
+    var 按钮组 = document.createElement("div");
+    按钮组.className = "卡按钮组";
+
+    // 展开「食材与做法」（数据来自食谱字段 食材 / 步骤）
+    if (菜.食材 || (菜.步骤 && 菜.步骤.length)) {
+      var 做法按钮 = document.createElement("button");
+      做法按钮.type = "button";
+      做法按钮.className = "做法按钮";
+      做法按钮.textContent = "做法";
+      做法按钮.setAttribute("aria-expanded", "false");
+      做法按钮.addEventListener("click", function () {
+        详情.hidden = !详情.hidden;
+        做法按钮.classList.toggle("展开", !详情.hidden);
+        做法按钮.setAttribute("aria-expanded", 详情.hidden ? "false" : "true");
+      });
+      按钮组.appendChild(做法按钮);
+    }
+
     var 按钮 = document.createElement("button");
     按钮.type = "button";
     按钮.className = "加入按钮";
@@ -295,7 +371,9 @@
     按钮.addEventListener("click", function () {
       添加记录(菜);
     });
-    底部.appendChild(按钮);
+    按钮组.appendChild(按钮);
+
+    底部.appendChild(按钮组);
 
     内容.appendChild(底部);
     卡.appendChild(内容);
@@ -469,6 +547,7 @@
     var 计划 = 读计划();
     if (!计划) {
       说明.textContent = "点击「生成一周计划」，按「" + 目标.人群 + "」为你排出 7 天三餐。";
+      取元素("偏差说明").hidden = true;
       return;
     }
 
@@ -521,6 +600,27 @@
           行.appendChild(标签);
           行.appendChild(菜名);
           行.appendChild(热量);
+
+          // 第 1 天视为今天：可一键「标记已吃」转入今日记录
+          if (日.序号 === 1) {
+            var 已吃 = 计划.已吃 || [];
+            if (已吃.indexOf(已吃键(日.序号, 餐.餐次)) !== -1) {
+              var 徽章 = document.createElement("span");
+              徽章.className = "已吃徽章";
+              徽章.textContent = "已吃 ✓";
+              行.appendChild(徽章);
+            } else {
+              var 标记按钮 = document.createElement("button");
+              标记按钮.type = "button";
+              标记按钮.className = "标记已吃按钮";
+              标记按钮.textContent = "标记已吃";
+              标记按钮.addEventListener("click", function () {
+                标记计划已吃(日.序号, 餐);
+              });
+              行.appendChild(标记按钮);
+            }
+          }
+
           日块.appendChild(行);
         });
       }
@@ -528,18 +628,53 @@
     });
 
     容器.appendChild(表);
+
+    // 计划 vs 实际：第 1 天视为今天，用一句话文字说明偏差（不做图表，见三不原则第 2 条）
+    var 偏差说明 = 取元素("偏差说明");
+    偏差说明.hidden = false;
+    var 首日 = 计划.天数[0];
+    var 实际 = 汇总营养(读记录()).卡路里;
+    var 偏差文本 = "今天（第 1 天）计划合计 " + 首日.卡路里合计 + " kcal，实际已记录 " + 实际 + " kcal";
+    if (实际 === 0) {
+      偏差文本 += "，还没开始记录。";
+    } else {
+      var 差值 = 实际 - 首日.卡路里合计;
+      if (差值 > 0) 偏差文本 += "，比计划多约 " + 差值 + " kcal。";
+      else if (差值 < 0) 偏差文本 += "，比计划少约 " + (-差值) + " kcal。";
+      else 偏差文本 += "，与计划一致。";
+    }
+    偏差说明.textContent = 偏差文本;
   }
 
   function 生成计划() {
     var 目标 = 读目标();
     if (!目标) return;
     var 计划 = 生成一周计划(目标.人群, 目标.目标);
+    计划.已吃 = [];   // 已吃标记，键为 "天序号-餐次"
     写计划(计划);
     渲染计划();
   }
 
   function 清除计划() {
     写计划(null);
+    渲染计划();
+  }
+
+  // 「标记已吃」：把计划中的一餐转入今日记录（借鉴 CookHero 的 计划 → 记录 闭环）
+  function 已吃键(天序号, 餐次) {
+    return 天序号 + "-" + 餐次;
+  }
+
+  function 标记计划已吃(天序号, 餐) {
+    var 计划 = 读计划();
+    if (!计划) return;
+    var 菜 = 按id查找(餐.id);
+    if (!菜) return;
+    添加记录(菜, 餐.餐次);
+    计划.已吃 = 计划.已吃 || [];
+    var 键 = 已吃键(天序号, 餐.餐次);
+    if (计划.已吃.indexOf(键) === -1) 计划.已吃.push(键);
+    写计划(计划);
     渲染计划();
   }
 
@@ -577,6 +712,12 @@
     取元素("总纤维").textContent = 合计.膳食纤维.toFixed(1);
     取元素("总蛋白质").textContent = 合计.蛋白质.toFixed(1);
 
+    // 宏量营养目标（按人群换算），无目标时只显示单位
+    var 宏量 = 目标值 === null ? null : 计算宏量目标(目标值, 目标.人群);
+    取元素("碳水目标").textContent = 宏量 ? "g / 目标 " + 宏量.碳水 : "g";
+    取元素("脂肪目标").textContent = 宏量 ? "g / 目标 " + 宏量.脂肪 : "g";
+    取元素("蛋白目标").textContent = 宏量 ? "g / 目标 " + 宏量.蛋白质 : "g";
+
     return { 合计: 合计, 目标值: 目标值 };
   }
 
@@ -607,7 +748,7 @@
   }
 
   // ============ 事件 ============
-  function 添加记录(菜) {
+  function 添加记录(菜, 指定餐次) {
     var 记录 = 读记录();
     记录.push({
       id: 菜.id,
@@ -617,7 +758,8 @@
       碳水: 菜.碳水,
       脂肪: 菜.脂肪,
       膳食纤维: 菜.膳食纤维,
-      蛋白质: 菜.蛋白质
+      蛋白质: 菜.蛋白质,
+      餐次: 指定餐次 || 判定餐次()
     });
     写记录(记录);
     刷新所有();
@@ -922,6 +1064,8 @@
   window.食谱搭配 = {
     计算基础代谢: 计算基础代谢,
     计算目标卡路里: 计算目标卡路里,
+    计算宏量目标: 计算宏量目标,
+    判定餐次: 判定餐次,
     汇总营养: 汇总营养,
     生成推荐: 生成推荐,
     生成一周计划: 生成一周计划,

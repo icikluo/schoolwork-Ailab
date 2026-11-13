@@ -556,3 +556,61 @@ button {
   .动作网格 { grid-template-columns: 1fr; }
   .主导航按钮 { padding: 8px 18px; font-size: 13px; }
 }
+
+/* ---------- v0.2 新增：食材与做法详情 ---------- */
+.卡按钮组 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.做法按钮 {
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--蓝-主);
+  border: 1px solid var(--蓝-边框);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.做法按钮:hover,
+.做法按钮.展开 { background: var(--蓝-浅); }
+.食谱详情 {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--蓝-浅);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--文字);
+}
+.食谱详情[hidden] { display: none; }
+.详情食材 { margin: 0 0 8px; line-height: 1.6; }
+.详情步骤 { margin: 0; padding-left: 20px; }
+.详情步骤 li { margin-bottom: 4px; line-height: 1.5; }
+
+/* ---------- v0.2 新增：今日记录的餐次标记 ---------- */
+.记录餐次 {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  background: var(--蓝-浅);
+  color: var(--蓝-深);
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+/* ---------- v0.2 新增：一周计划的「标记已吃」 ---------- */
+.标记已吃按钮 {
+  padding: 4px 10px;
+  background: var(--蓝-浅);
+  color: var(--蓝-深);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.标记已吃按钮:hover { background: var(--蓝-主); color: var(--白); }
+.已吃徽章 {
+  font-size: 12px;
+  color: var(--绿);
+  white-space: nowrap;
+}
+#偏差说明 { margin-top: 12px; }
