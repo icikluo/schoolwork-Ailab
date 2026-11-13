@@ -557,9 +557,10 @@
 
     取元素("已摄入").textContent = 合计.卡路里;
 
-    var 目标显示 = 取元素("已摄入").nextElementSibling;
+    // 直接按 id 取，不再依赖 nextElementSibling 的 DOM 顺序。
+    // 结构一改就崩，这正是第 5 周要讲的"隐式契约"问题。
     var 目标文本 = 目标值 === null ? "—" : 目标值;
-    取元素("已摄入").nextElementSibling.textContent = "/ 目标 " + 目标文本;
+    取元素("目标对照").textContent = "/ 目标 " + 目标文本;
 
     var 填充 = 取元素("进度填充");
     if (目标值 === null) {
@@ -680,6 +681,198 @@
     取元素("人群").value = 目标.人群;
   }
 
+  // ============ 健身动作教程（按部位分区） ============
+  var 动作部位 = ["全部", "上肢", "下肢", "核心", "全身"];
+  var 当前部位 = "全部";
+
+  function 部位列表() {
+    return 动作部位.map(function (名称) {
+      var 数量 = 名称 === "全部"
+        ? window.动作数据.length
+        : window.动作数据.filter(function (a) {
+            return a.部位 === 名称;
+          }).length;
+      return { 名称: 名称, 数量: 数量 };
+    });
+  }
+
+  // 无图动作的 SVG 简笔示意图（用姿态剪影区分部位）
+  function 画示意图(动作) {
+    var 图 = {
+      上肢: '<circle cx="60" cy="26" r="8"/><line x1="60" y1="34" x2="60" y2="62"/><line x1="60" y1="42" x2="34" y2="52"/><line x1="60" y1="42" x2="86" y2="52"/><line x1="60" y1="62" x2="48" y2="86"/><line x1="60" y1="62" x2="72" y2="86"/>',
+      下肢: '<circle cx="60" cy="24" r="8"/><line x1="60" y1="32" x2="60" y2="56"/><line x1="60" y1="40" x2="44" y2="50"/><line x1="60" y1="40" x2="76" y2="50"/><line x1="60" y1="56" x2="42" y2="80"/><line x1="42" y1="80" x2="42" y2="90"/><line x1="60" y1="56" x2="78" y2="80"/><line x1="78" y1="80" x2="78" y2="90"/>',
+      核心: '<circle cx="34" cy="60" r="7"/><line x1="41" y1="60" x2="72" y2="44"/><line x1="72" y1="44" x2="92" y2="76"/><line x1="92" y1="76" x2="104" y2="78"/><line x1="55" y1="52" x2="52" y2="76"/><line x1="52" y1="76" x2="64" y2="80"/>',
+      全身: '<circle cx="60" cy="22" r="8"/><line x1="60" y1="30" x2="60" y2="58"/><line x1="60" y1="36" x2="36" y2="26"/><line x1="60" y1="36" x2="84" y2="26"/><line x1="60" y1="58" x2="44" y2="86"/><line x1="60" y1="58" x2="76" y2="86"/>'
+    };
+    var 路径 = 图[动作.部位] || 图.全身;
+    var svg = '<svg viewBox="0 0 120 100" width="150" height="125" ' +
+      'fill="none" stroke="#2b6cb0" stroke-width="3.2" stroke-linecap="round" ' +
+      'aria-label="' + 动作.名称 + ' 示意图" role="img">' + 路径 + '</svg>';
+
+    var 盒 = document.createElement("div");
+    盒.className = "示意";
+    盒.innerHTML = svg;
+    return 盒;
+  }
+
+  function 创建动作卡(动作) {
+    var 卡 = document.createElement("div");
+    卡.className = "动作卡";
+
+    var 图区 = document.createElement("div");
+    图区.className = "动作图";
+    if (动作.图片) {
+      var img = document.createElement("img");
+      img.src = 动作.图片;
+      img.alt = 动作.名称;
+      img.loading = "lazy";
+      img.addEventListener("error", function () {
+        图区.innerHTML = "";
+        图区.appendChild(画示意图(动作));
+      });
+      图区.appendChild(img);
+    } else {
+      图区.appendChild(画示意图(动作));
+    }
+    卡.appendChild(图区);
+
+    var 内容 = document.createElement("div");
+    内容.className = "动作内容";
+
+    var 头 = document.createElement("div");
+    头.className = "动作头";
+    var 名 = document.createElement("span");
+    名.className = "动作名";
+    名.textContent = 动作.名称;
+    var 建议 = document.createElement("span");
+    建议.className = "动作建议";
+    建议.textContent = 动作.建议;
+    头.appendChild(名);
+    头.appendChild(建议);
+    内容.appendChild(头);
+
+    var 肌群 = document.createElement("div");
+    肌群.className = "动作肌群";
+    肌群.textContent = "目标： " + 动作.目标肌群;
+    内容.appendChild(肌群);
+
+    var 要点标题 = document.createElement("div");
+    要点标题.className = "动作小节标题";
+    要点标题.textContent = "动作要点";
+    内容.appendChild(要点标题);
+
+    var 要点 = document.createElement("ul");
+    要点.className = "动作要点";
+    动作.要点.forEach(function (条) {
+      var li = document.createElement("li");
+      li.textContent = 条;
+      要点.appendChild(li);
+    });
+    内容.appendChild(要点);
+
+    if (动作.常见错误 && 动作.常见错误.length) {
+      var 错标题 = document.createElement("div");
+      错标题.className = "动作小节标题";
+      错标题.textContent = "常见错误";
+      内容.appendChild(错标题);
+
+      var 错误 = document.createElement("ul");
+      错误.className = "动作错误";
+      动作.常见错误.forEach(function (条) {
+        var li = document.createElement("li");
+        li.textContent = 条;
+        错误.appendChild(li);
+      });
+      内容.appendChild(错误);
+    }
+
+    卡.appendChild(内容);
+    return 卡;
+  }
+
+  function 渲染动作() {
+    if (typeof window.动作数据 === "undefined") return;
+
+    var 导航 = 取元素("部位导航");
+    导航.innerHTML = "";
+
+    部位列表().forEach(function (项) {
+      var 按钮 = document.createElement("button");
+      按钮.type = "button";
+      按钮.className = "分区按钮" + (项.名称 === 当前部位 ? " 选中" : "");
+      按钮.setAttribute("role", "tab");
+      按钮.innerHTML = 项.名称 + '<span class="计数">' + 项.数量 + "</span>";
+      按钮.addEventListener("click", function () {
+        当前部位 = 项.名称;
+        渲染动作();
+      });
+      导航.appendChild(按钮);
+    });
+
+    var 内容 = 取元素("动作内容");
+    内容.innerHTML = "";
+
+    var 待显示 = 当前部位 === "全部"
+      ? window.动作数据.slice()
+      : window.动作数据.filter(function (a) {
+          return a.部位 === 当前部位;
+        });
+
+    if (待显示.length === 0) {
+      var 空 = document.createElement("p");
+      空.className = "空分区";
+      空.textContent = "这个部位暂时还没有动作。";
+      内容.appendChild(空);
+      return;
+    }
+
+    var 网格 = document.createElement("div");
+    网格.className = "动作网格";
+    待显示.forEach(function (动作) {
+      网格.appendChild(创建动作卡(动作));
+    });
+    内容.appendChild(网格);
+  }
+
+  // ============ 主功能分区切换 ============
+  var 主分区键 = "食谱搭配-主分区";
+  var 当前主分区 = "饮食";
+
+  function 切换主分区(名称) {
+    当前主分区 = 名称;
+    ["饮食", "训练"].forEach(function (名) {
+      var 区 = 取元素("分区-" + 名);
+      if (区) 区.hidden = 名 !== 名称;
+    });
+    var 按钮集 = document.querySelectorAll(".主导航按钮");
+    for (var i = 0; i < 按钮集.length; i++) {
+      var 是选中 = 按钮集[i].getAttribute("data-分区") === 名称;
+      按钮集[i].classList.toggle("选中", 是选中);
+      按钮集[i].setAttribute("aria-selected", 是选中 ? "true" : "false");
+    }
+    try {
+      localStorage.setItem(主分区键, 名称);
+    } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
+  }
+
+  function 初始化主分区() {
+    var 保存 = null;
+    try {
+      保存 = localStorage.getItem(主分区键);
+    } catch (e) { /* 忽略 */ }
+    if (保存 === "训练" || 保存 === "饮食") 当前主分区 = 保存;
+
+    var 按钮集 = document.querySelectorAll(".主导航按钮");
+    for (var i = 0; i < 按钮集.length; i++) {
+      (function (按钮) {
+        按钮.addEventListener("click", function () {
+          切换主分区(按钮.getAttribute("data-分区"));
+        });
+      })(按钮集[i]);
+    }
+    切换主分区(当前主分区);
+  }
+
   function 初始化() {
     // 自检：数据文件缺失时给出明确提示，避免页面"看起来正常但完全不可用"。
     // 见 作业/A1/A1-运行证据.md 实验 C。
@@ -718,7 +911,9 @@
 
     渲染专区();
     渲染计划();
+    渲染动作();
     刷新所有();
+    初始化主分区();
   }
 
   document.addEventListener("DOMContentLoaded", 初始化);
@@ -730,6 +925,7 @@
     汇总营养: 汇总营养,
     生成推荐: 生成推荐,
     生成一周计划: 生成一周计划,
-    计划天数: 计划天数
+    计划天数: 计划天数,
+    动作部位: 动作部位
   };
 })();

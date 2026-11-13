@@ -38,6 +38,40 @@ h1, h2 { margin: 0; font-weight: 600; }
 .顶栏 h1 { font-size: 26px; letter-spacing: 2px; }
 .副标题 { margin: 6px 0 0; font-size: 14px; opacity: 0.85; }
 
+/* ---------- 主功能分区导航 ---------- */
+.主导航 {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.主导航按钮 {
+  padding: 9px 26px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.主导航按钮:hover {
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+}
+.主导航按钮.选中 {
+  background: var(--白);
+  color: var(--蓝-深);
+  border-color: var(--白);
+}
+
+/* ---------- 功能区容器 ---------- */
+.功能区 {
+  display: grid;
+  gap: 16px;
+}
+.功能区[hidden] { display: none; }
+
 /* ---------- 布局 ---------- */
 .容器 {
   max-width: 880px;
@@ -403,6 +437,106 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 训练：动作卡片 ---------- */
+.动作网格 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.动作卡 {
+  border: 1px solid var(--蓝-边框);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--白);
+  display: flex;
+  flex-direction: column;
+}
+.动作卡:hover { border-color: var(--蓝-主); }
+
+.动作图 {
+  height: 132px;
+  background: var(--蓝-浅);
+  overflow: hidden;
+}
+.动作图 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.动作图 .示意 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8f1fb 0%, #d5e3f3 100%);
+}
+
+.动作内容 {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.动作头 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.动作名 { font-weight: 600; font-size: 15px; color: var(--文字); }
+.动作建议 {
+  font-size: 11px;
+  color: var(--蓝-深);
+  background: var(--蓝-浅);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.动作肌群 {
+  font-size: 12px;
+  color: var(--文字-淡);
+}
+.动作小节标题 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--蓝-深);
+  margin-top: 2px;
+}
+.动作要点 {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--文字);
+  line-height: 1.7;
+}
+.动作要点 li::marker { color: var(--蓝-主); }
+.动作错误 {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--红);
+  line-height: 1.7;
+}
+
+/* ---------- 训练：安全说明卡片 ---------- */
+.提示卡片 {
+  background: #fdfbf5;
+  border-color: #f0e4c8;
+}
+.提示卡片 h2 { color: #8a6d1f; border-bottom-color: #f0e4c8; }
+.安全列表 {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #5c5033;
+  line-height: 1.8;
+}
+.安全列表 li::marker { color: #b8860b; }
+
 /* ---------- 页脚 ---------- */
 .页脚 {
   text-align: center;
@@ -419,4 +553,6 @@ button {
   .热量 { min-width: 0; text-align: left; }
   .食谱网格 { grid-template-columns: 1fr 1fr; }
   .食谱图 { height: 90px; }
+  .动作网格 { grid-template-columns: 1fr; }
+  .主导航按钮 { padding: 8px 18px; font-size: 13px; }
 }
