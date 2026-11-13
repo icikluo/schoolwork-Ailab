@@ -120,68 +120,6 @@
         <button type="button" class="次按钮" id="清空按钮">清空今日记录</button>
       </section>
 
-      <!-- ⑥ AI 助手（可选，需联网；不配置不影响其他功能） -->
-      <section class="卡片" id="AI卡片">
-        <h2>⑥ AI 助手（可选，需联网）</h2>
-        <p class="提示">
-          需自备大模型接口密钥（OpenAI 兼容）。密钥只保存在本浏览器，不写进代码、不上传。
-          不配置时，页面其余功能完全离线可用。
-          <strong>服务商兼容提示</strong>：实测允许浏览器直连的有 DeepSeek、Kimi（Moonshot）、
-          通义（DashScope 兼容模式）；智谱 BigModel 会拦截浏览器请求（报 Failed to fetch），
-          暂不可用。
-        </p>
-
-        <details class="AI设置折叠">
-          <summary>接口设置</summary>
-          <form id="AI设置表单" class="表单网格">
-            <label>接口地址（域名或完整地址均可，自动补全 /chat/completions）
-              <input id="AI接口" type="url" list="AI接口预设" value="https://api.deepseek.com" required>
-            </label>
-            <datalist id="AI接口预设">
-              <option value="https://api.deepseek.com">DeepSeek（模型填 deepseek-flash，实测可直连）</option>
-              <option value="https://api.moonshot.cn/v1">Kimi / Moonshot（模型填 moonshot-v1-8k，实测可直连）</option>
-              <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">通义 DashScope 兼容模式（模型填 qwen-plus，实测可直连）</option>
-            </datalist>
-            <label>模型
-              <input id="AI模型" type="text" value="deepseek-flash" required>
-            </label>
-            <label>密钥
-              <input id="AI密钥" type="password" placeholder="只存本浏览器，不进代码仓库" autocomplete="off">
-            </label>
-            <div class="AI按钮行">
-              <button type="submit" class="主按钮">保存设置</button>
-              <button type="button" class="次按钮" id="AI测试按钮">测试连接</button>
-            </div>
-          </form>
-        </details>
-        <p class="提示" id="AI状态"></p>
-
-        <div class="AI功能区">
-          <h3>AI 记录</h3>
-          <p class="提示">用一句话描述吃了什么，AI 估算营养并加入今日记录。</p>
-          <form id="AI记录表单" class="AI行">
-            <input id="AI记录输入" type="text" placeholder="例：中午吃了一碗牛肉面和一个鸡蛋" required>
-            <button type="submit" class="主按钮" id="AI记录按钮">识别并记录</button>
-          </form>
-          <p class="提示" id="AI记录提示"></p>
-        </div>
-
-        <div class="AI功能区">
-          <h3>AI 营养分析</h3>
-          <p class="提示">按今日记录与目标生成一段文字短评（教学演示，不构成营养建议）。</p>
-          <button type="button" class="次按钮" id="AI分析按钮">生成今日分析</button>
-          <p class="AI结果" id="AI分析结果" hidden></p>
-        </div>
-
-        <div class="AI功能区">
-          <h3>AI 个性化推荐</h3>
-          <p class="提示">结合人群、宏量缺口与剩余额度，让 AI 从食谱里选下一餐（规则推荐仍是上方「③」）。</p>
-          <button type="button" class="次按钮" id="AI推荐按钮">让 AI 推荐下一餐</button>
-          <p class="提示" id="AI推荐说明"></p>
-          <ul class="食谱列表" id="AI推荐列表"></ul>
-        </div>
-      </section>
-
     </div>
 
     <!-- ==================== 训练分区 ==================== -->
