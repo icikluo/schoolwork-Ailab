@@ -669,6 +669,14 @@ button {
   gap: 8px;
 }
 .动作名 { font-weight: 500; font-size: 15px; }
+.动作器械 {
+  font-size: 10px;
+  color: var(--文字-淡);
+  border: 1px solid var(--边框);
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .动作建议 {
   font-size: 11px;
   color: var(--绿-深);

@@ -1121,10 +1121,14 @@
     var 名 = document.createElement("span");
     名.className = "动作名";
     名.textContent = 动作.名称;
+    var 器械 = document.createElement("span");
+    器械.className = "动作器械";
+    器械.textContent = 动作.器械 || "自重";
     var 建议 = document.createElement("span");
     建议.className = "动作建议";
     建议.textContent = 动作.建议;
     头.appendChild(名);
+    头.appendChild(器械);
     头.appendChild(建议);
     内容.appendChild(头);
 
