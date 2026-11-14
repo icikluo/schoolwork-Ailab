@@ -35,6 +35,18 @@
   var 当前搜索词 = "";          // 食谱专区搜索
   var 当前排序 = "默认";        // 食谱专区排序
 
+  // 版式优化（v0.4.3）：专区默认限量，避免 40 道菜把一周计划推到页面底部
+  var 专区默认条数 = 12;
+  var 专区展开键 = "食谱搭配-专区展开";
+  var 专区已展开 = false;
+
+  // 本次应显示的条数：显式展开或正在搜索/排序时给全量，否则最多默认条数。
+  // 抽成纯函数，便于逻辑复算.py 复算（不依赖 DOM）。
+  function 专区显示条数(总数, 展开, 有筛选) {
+    if (展开 || 有筛选) return 总数;
+    return Math.min(总数, 专区默认条数);
+  }
+
   // 宏量营养目标供能比（借鉴 CookHero 的目标管理，按人群给三项目标）
   // 蛋白质 / 脂肪 / 碳水 三项供能比之和为 1
   var 宏量供能比 = {
@@ -506,15 +518,40 @@
         ? "没有找到「" + 当前搜索词 + "」相关的菜，换个关键词或分区试试。"
         : "这个分类下暂时还没有食谱。";
       内容.appendChild(空);
+      取元素("专区显示说明").textContent = "共 0 道";
+      取元素("展开专区按钮").hidden = true;
       return;
     }
 
+    // 搜索 / 排序是"带着目的找菜"，此时一律给全量结果；
+    // 普通浏览默认只列前 12 道，保持页面紧凑，让一周计划与专区都在两屏内。
+    var 有筛选 = Boolean(当前搜索词) || 当前排序 !== "默认";
+    var 显示数 = 专区显示条数(待显示.length, 专区已展开, 有筛选);
+
     var 网格 = document.createElement("div");
     网格.className = "食谱网格";
-    待显示.forEach(function (菜) {
+    待显示.slice(0, 显示数).forEach(function (菜) {
       网格.appendChild(创建食谱卡(菜));
     });
     内容.appendChild(网格);
+    更新专区显示行(显示数, 待显示.length, 有筛选);
+  }
+
+  function 更新专区显示行(显示数, 总数, 有筛选) {
+    var 说明 = 取元素("专区显示说明");
+    var 按钮 = 取元素("展开专区按钮");
+    说明.textContent = 显示数 < 总数
+      ? "显示 " + 显示数 + " / " + 总数 + " 道"
+      : (有筛选 ? "共 " + 总数 + " 道（当前搜索 / 排序结果）" : "共 " + 总数 + " 道");
+
+    if (有筛选 || 总数 <= 专区默认条数) {
+      按钮.hidden = true;
+    } else {
+      按钮.hidden = false;
+      按钮.textContent = 专区已展开
+        ? "收起（只看前 " + 专区默认条数 + " 道）"
+        : "显示全部 " + 总数 + " 道";
+    }
   }
 
   // ============ 一周食谱计划（只做 7 天） ============
@@ -1231,9 +1268,31 @@
       按钮集[i].classList.toggle("选中", 是选中);
       按钮集[i].setAttribute("aria-selected", 是选中 ? "true" : "false");
     }
+    取元素("区块导航").hidden = 名称 !== "饮食";
     try {
       localStorage.setItem(主分区键, 名称);
     } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
+  }
+
+  // 饮食分区内的快速跳转：点按钮滚到对应卡片。
+  // 不做滚动联动高亮——桌面端首屏两张卡并排、左右栏也有同高卡片，
+  // 用视口位置反推"当前区块"会来回跳；点击高亮即表示刚跳到哪里。
+  function 初始化区块导航() {
+    var 导航 = 取元素("区块导航");
+    var 按钮集 = 导航.querySelectorAll(".区块导航按钮");
+
+    for (var i = 0; i < 按钮集.length; i++) {
+      (function (按钮) {
+        var 目标 = document.getElementById(按钮.getAttribute("data-目标"));
+        if (!目标) return;
+        按钮.addEventListener("click", function () {
+          目标.scrollIntoView({ behavior: "smooth", block: "start" });
+          for (var k = 0; k < 按钮集.length; k++) {
+            按钮集[k].classList.toggle("选中", 按钮集[k] === 按钮);
+          }
+        });
+      })(按钮集[i]);
+    }
   }
 
   function 初始化主分区() {
@@ -1319,9 +1378,19 @@
       当前排序 = this.value;
       渲染专区();
     });
+    取元素("展开专区按钮").addEventListener("click", function () {
+      专区已展开 = !专区已展开;
+      try {
+        localStorage.setItem(专区展开键, 专区已展开 ? "1" : "0");
+      } catch (e) { /* 隐私模式忽略 */ }
+      渲染专区();
+    });
     try {
-      var 存分区 = localStorage.getItem(食谱分区键);
-      if (合法分区.indexOf(存分区) !== -1) 当前分区 = 存分区;
+      if (localStorage.getItem(食谱分区键) !== null) {
+        var 存分区 = localStorage.getItem(食谱分区键);
+        if (合法分区.indexOf(存分区) !== -1) 当前分区 = 存分区;
+      }
+      专区已展开 = localStorage.getItem(专区展开键) === "1";
     } catch (e) { /* 忽略 */ }
 
     渲染专区();
@@ -1330,6 +1399,7 @@
     渲染历史();
     刷新所有();
     初始化主分区();
+    初始化区块导航();
   }
 
   document.addEventListener("DOMContentLoaded", 初始化);
@@ -1343,6 +1413,8 @@
     汇总营养: 汇总营养,
     生成推荐: 生成推荐,
     按偏移取段: 按偏移取段,
+    专区显示条数: 专区显示条数,
+    专区默认条数: 专区默认条数,
     折算份量: 折算份量,
     截断历史: 截断历史,
     生成一周计划: 生成一周计划,

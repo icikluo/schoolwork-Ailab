@@ -29,7 +29,9 @@
     <!-- ==================== 饮食分区 ==================== -->
     <div class="功能区" id="分区-饮食">
 
-      <!-- 今日摄入：首屏主视觉 -->
+      <!-- 首屏并排：今日摄入（主视觉）+ 为你推荐（下一餐） -->
+      <div class="首屏网格">
+
       <section class="卡片 今日卡片" id="进度卡片">
         <div class="今日头">
           <h2>今日摄入</h2>
@@ -52,6 +54,26 @@
           <div class="营养项"><span>蛋白质</span><b id="总蛋白质">0</b><small id="蛋白目标">g</small></div>
         </div>
       </section>
+
+      <section class="卡片 首屏推荐卡" id="推荐卡片">
+        <div class="卡片头">
+          <h2>为你推荐</h2>
+          <button type="button" class="文字按钮" id="换一批按钮">换一批</button>
+        </div>
+        <p class="提示" id="推荐说明">设置目标后开始推荐</p>
+        <ul class="食谱列表" id="推荐列表"></ul>
+      </section>
+
+      </div><!-- /首屏网格 -->
+
+      <!-- 区块导航：饮食分区内快速跳转（吸顶，训练分区隐藏） -->
+      <nav class="区块导航" id="区块导航" aria-label="饮食分区内快速跳转">
+        <span class="区块导航标记">快速跳转</span>
+        <button type="button" class="区块导航按钮 选中" data-目标="进度卡片">今日摄入</button>
+        <button type="button" class="区块导航按钮" data-目标="推荐卡片">为你推荐</button>
+        <button type="button" class="区块导航按钮" data-目标="计划卡片">一周计划</button>
+        <button type="button" class="区块导航按钮" data-目标="专区卡片">食谱专区</button>
+      </nav>
 
       <div class="饮食布局">
 
@@ -124,16 +146,19 @@
 
         </aside>
 
-        <!-- 右栏：推荐 / 食谱专区 / 一周计划 -->
+        <!-- 右栏：一周计划（前置，避免被 40 道菜埋住）/ 食谱专区 -->
         <div class="右栏">
 
-          <section class="卡片" id="推荐卡片">
-            <div class="卡片头">
-              <h2>为你推荐</h2>
-              <button type="button" class="文字按钮" id="换一批按钮">换一批</button>
+          <section class="卡片" id="计划卡片">
+            <h2>一周食谱计划</h2>
+            <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
+            <div class="计划操作">
+              <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
+              <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
+              <span class="提示" id="计划范围说明"></span>
             </div>
-            <p class="提示" id="推荐说明">设置目标后开始推荐</p>
-            <ul class="食谱列表" id="推荐列表"></ul>
+            <div id="计划结果"></div>
+            <p class="提示" id="偏差说明" hidden></p>
           </section>
 
           <section class="卡片" id="专区卡片">
@@ -146,20 +171,12 @@
                 <option value="热量降">热量高 → 低</option>
               </select>
             </div>
+            <div class="专区显示行">
+              <span class="提示" id="专区显示说明"></span>
+              <button type="button" class="文字按钮" id="展开专区按钮">显示全部</button>
+            </div>
             <div class="分区导航" id="分区导航" role="tablist"></div>
             <div class="分区内容" id="分区内容"></div>
-          </section>
-
-          <section class="卡片" id="计划卡片">
-            <h2>一周食谱计划</h2>
-            <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
-            <div class="计划操作">
-              <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
-              <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
-              <span class="提示" id="计划范围说明"></span>
-            </div>
-            <div id="计划结果"></div>
-            <p class="提示" id="偏差说明" hidden></p>
           </section>
 
         </div>

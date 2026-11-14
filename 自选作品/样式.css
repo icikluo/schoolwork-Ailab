@@ -27,6 +27,15 @@
   --衬线: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
   --无衬线: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
   --动效: 0.2s ease-out;
+  /* 两层吸顶高度：锚点跳转与左栏 sticky 都要避开，避免标题被遮住 */
+  --顶栏高: 58px;
+  --区块栏高: 46px;
+  --避让高: 110px;
+}
+
+/* 所有可跳转的卡片都留出吸顶栏的空间 */
+#进度卡片, #推荐卡片, #计划卡片, #专区卡片, #记录卡片 {
+  scroll-margin-top: var(--避让高);
 }
 
 * { box-sizing: border-box; }
@@ -213,6 +222,64 @@ b, strong, .热量, .营养明细, .计划日统计 {
 .营养项 b { font-size: 19px; font-weight: 500; color: var(--绿-深); margin-top: 2px; }
 .营养项 small { font-size: 11px; color: var(--文字-淡); }
 
+/* ---------- 首屏并排：今日摄入 + 为你推荐 ---------- */
+.首屏网格 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.首屏推荐卡 {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.首屏推荐卡 .食谱列表 { align-content: start; }
+.首屏推荐卡 .食谱项 { padding: 10px 12px; }
+.首屏推荐卡 .提示 { margin-top: 0; }
+
+/* ---------- 区块导航（第二层吸顶，仅在饮食分区可见） ---------- */
+.区块导航 {
+  position: sticky;
+  top: var(--顶栏高);
+  z-index: 15;
+  align-self: start;
+  justify-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  background: var(--纸底);
+  border-bottom: 1px solid var(--边框);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.区块导航[hidden] { display: none; }
+.区块导航标记 {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--文字-淡);
+  padding: 0 8px 0 4px;
+}
+.区块导航按钮 {
+  flex: none;
+  padding: 5px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--文字-淡);
+  background: var(--卡白);
+  border: 1px solid var(--边框);
+  border-radius: 999px;
+  transition: color var(--动效), background var(--动效), border-color var(--动效);
+}
+.区块导航按钮:hover { color: var(--绿-主); border-color: var(--绿-边); }
+.区块导航按钮.选中 {
+  color: var(--卡白);
+  background: var(--绿-主);
+  border-color: var(--绿-主);
+}
+
 /* ---------- 饮食双栏 ---------- */
 .饮食布局 {
   display: grid;
@@ -221,6 +288,23 @@ b, strong, .热量, .营养明细, .计划日统计 {
   align-items: start;
 }
 .左栏, .右栏 { display: grid; gap: 16px; }
+/* 滚动时长驻：目标摘要与今日记录随时可见 */
+.左栏 {
+  position: sticky;
+  top: var(--避让高);
+  align-self: start;
+}
+
+/* ---------- 食谱专区：显示范围 ---------- */
+.专区显示行 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.专区显示行 .提示 { margin: 0; font-size: 12px; }
+.专区显示行 .文字按钮 { flex: none; }
 
 /* ---------- 设置卡片（可折叠） ---------- */
 .设置摘要 {
@@ -240,6 +324,7 @@ b, strong, .热量, .营养明细, .计划日统计 {
   transition: background var(--动效);
 }
 .文字按钮:hover { background: var(--绿-浅); }
+.文字按钮[hidden] { display: none; }
 
 /* ---------- 表单 ---------- */
 .表单网格 {
@@ -732,14 +817,19 @@ button {
 
 /* ---------- 响应式 ---------- */
 @media (max-width: 900px) {
+  .首屏网格 { grid-template-columns: 1fr; }
   .饮食布局 { grid-template-columns: 1fr; }
+  .左栏 { position: static; }
   .今日数字 strong { font-size: 38px; }
 }
 
 @media (max-width: 560px) {
+  :root { --顶栏高: 50px; --避让高: 96px; }
   .顶栏内容 { gap: 10px; padding: 8px 14px; }
   .副标题 { display: none; }
   .顶栏目标 { display: none; }
+  .区块导航标记 { display: none; }
+  .区块导航按钮 { padding: 5px 11px; font-size: 12px; }
   .容器 { padding: 16px 14px 44px; }
   .今日卡片 { padding: 18px; }
   .食谱项 { flex-wrap: wrap; }
