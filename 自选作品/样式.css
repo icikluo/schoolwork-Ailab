@@ -604,14 +604,23 @@ button {
 .计划餐 .热量 { font-size: 12px; color: var(--文字-淡); }
 
 /* ---------- 食材与做法详情 ---------- */
-.卡按钮组 { display: flex; align-items: center; gap: 6px; }
+/* 按钮组允许换行：卡片宽约 215px，「做法 + 份量 + 记录」三个控件排不下时换行，
+   避免「记录」按钮被挤出卡片边界而看不见（见 A1 实验记录：记录按钮被裁 bug）。 */
+.卡按钮组 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .做法按钮 {
-  padding: 7px 12px;
+  padding: 6px 10px;
   background: transparent;
   color: var(--绿-主);
   border: 1px solid var(--绿-边);
   font-size: 13px;
   white-space: nowrap;
+  flex: none;
 }
 .做法按钮:hover,
 .做法按钮.展开 { background: var(--绿-浅); }
@@ -667,8 +676,11 @@ button {
   font-size: 12px;
   width: auto;
   border-radius: 7px;
+  flex: none;
 }
 .食谱项 .份量选择 { flex: none; }
+/* 食谱卡内的记录按钮不被压缩，保证始终可点可见 */
+.食谱卡 .加入按钮 { flex: none; white-space: nowrap; }
 
 /* ---------- 近 7 天记录 ---------- */
 .历史日 {
