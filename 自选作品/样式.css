@@ -229,9 +229,6 @@ b, strong, .热量, .营养明细, .计划日统计 {
   gap: 16px;
   align-items: stretch;
 }
-.首屏网格[hidden] { display: none; }
-.左栏 [hidden], .右栏 [hidden] { display: none; }
-
 .首屏推荐卡 {
   display: flex;
   flex-direction: column;
@@ -240,12 +237,6 @@ b, strong, .热量, .营养明细, .计划日统计 {
 .首屏推荐卡 .食谱列表 { align-content: start; }
 .首屏推荐卡 .食谱项 { padding: 10px 12px; }
 .首屏推荐卡 .提示 { margin-top: 0; }
-
-
-/* 首屏只剩一张卡时占满整行（区块切换后隐藏了另一张） */
-.首屏网格.单卡 {
-  grid-template-columns: 1fr;
-}
 
 /* ---------- 区块导航（第二层吸顶，仅在饮食分区可见） ---------- */
 .区块导航 {
