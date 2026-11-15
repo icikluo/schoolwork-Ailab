@@ -42,7 +42,7 @@
           <span class="今日对照" id="目标对照">/ 目标 —</span>
         </div>
         <p class="提示 今日引导" id="今日引导" hidden>
-          还没有设置目标：在左栏「我的目标」填好身体数据，算出今天的额度。
+          还没有设置目标：<button type="button" class="文字按钮" id="去设置按钮">去填身体数据</button>，算出今天的额度。
         </p>
         <div class="进度条" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="进度条外框">
           <div class="进度填充" id="进度填充"></div>
@@ -71,6 +71,7 @@
         <span class="区块导航标记">快速跳转</span>
         <button type="button" class="区块导航按钮 选中" data-目标="进度卡片">今日摄入</button>
         <button type="button" class="区块导航按钮" data-目标="推荐卡片">为你推荐</button>
+        <button type="button" class="区块导航按钮" data-目标="记录卡片">今日记录</button>
         <button type="button" class="区块导航按钮" data-目标="计划卡片">一周计划</button>
         <button type="button" class="区块导航按钮" data-目标="专区卡片">食谱专区</button>
       </nav>
@@ -80,7 +81,16 @@
         <!-- 左栏：目标设置（低频，可折叠）+ 今日记录 -->
         <aside class="左栏">
 
-          <section class="卡片" id="设置卡片">
+          <!-- 左栏只显示一个面板：三张卡不再纵向堆叠，避免 sticky 后底部内容够不到 -->
+          <div class="左栏标签" id="左栏标签" role="tablist" aria-label="左栏内容切换">
+            <button type="button" class="左栏标签按钮 选中" data-面板="记录卡片" role="tab" aria-selected="true">
+              今日记录 <span class="左栏计数" id="左栏记录数">0</span>
+            </button>
+            <button type="button" class="左栏标签按钮" data-面板="设置卡片" role="tab" aria-selected="false">我的目标</button>
+            <button type="button" class="左栏标签按钮" data-面板="历史卡片" role="tab" aria-selected="false">近 7 天</button>
+          </div>
+
+          <section class="卡片 左栏面板" id="设置卡片" hidden>
             <div class="卡片头">
               <h2>我的目标</h2>
               <button type="button" class="文字按钮" id="设置开关">修改</button>
@@ -131,14 +141,14 @@
             </div>
           </section>
 
-          <section class="卡片" id="记录卡片">
+          <section class="卡片 左栏面板" id="记录卡片">
             <h2>今日已记录</h2>
             <ul class="食谱列表" id="记录列表"></ul>
             <p class="提示" id="记录空提示">今天还没有记录，从推荐或食谱专区挑一道菜吧。</p>
             <button type="button" class="次按钮" id="清空按钮">清空今日记录</button>
           </section>
 
-          <section class="卡片" id="历史卡片">
+          <section class="卡片 左栏面板" id="历史卡片" hidden>
             <h2>近 7 天记录</h2>
             <div id="历史内容"></div>
             <p class="提示" id="历史空提示">还没有往日记录，只保留最近 7 天。</p>

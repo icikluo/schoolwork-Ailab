@@ -40,6 +40,17 @@
   var 专区展开键 = "食谱搭配-专区展开";
   var 专区已展开 = false;
 
+  // 版式优化（v0.4.5）：左栏只显示一个面板，避免三张卡堆叠把内容顶出视口
+  var 左栏面板键 = "食谱搭配-左栏面板";
+  var 左栏面板集 = ["记录卡片", "设置卡片", "历史卡片"];
+
+  // 纯函数：左栏初始面板的取舍（抽出来便于逻辑复算.py 复算，不依赖 DOM）
+  function 初始左栏面板(已存值, 有目标) {
+    return 左栏面板集.indexOf(已存值) !== -1
+      ? 已存值
+      : (有目标 ? "记录卡片" : "设置卡片");
+  }
+
   // 本次应显示的条数：显式展开或正在搜索/排序时给全量，否则最多默认条数。
   // 抽成纯函数，便于逻辑复算.py 复算（不依赖 DOM）。
   function 专区显示条数(总数, 展开, 有筛选) {
@@ -851,6 +862,7 @@
     var 记录 = 读记录();
     渲染列表("记录列表", 记录, "移除");
     取元素("记录空提示").hidden = 记录.length > 0;
+    取元素("左栏记录数").textContent = 记录.length;
   }
 
   function 渲染进度() {
@@ -1325,16 +1337,70 @@
   // 饮食分区内的快速跳转：点按钮滚到对应卡片。
   // 不做滚动联动高亮——桌面端首屏两张卡并排、左右栏也有同高卡片，
   // 用视口位置反推"当前区块"会来回跳；点击高亮即表示刚跳到哪里。
+  // 左栏：一次只显示一个面板（今日记录 / 我的目标 / 近 7 天）。
+  // 三张卡同时堆叠时会超过视口，sticky 粘住后底部内容永远够不到。
+  function 切换左栏面板(面板id, 记住) {
+    if (左栏面板集.indexOf(面板id) === -1) 面板id = "记录卡片";
+    var 按钮集 = document.querySelectorAll(".左栏标签按钮");
+    for (var i = 0; i < 按钮集.length; i++) {
+      var 按钮 = 按钮集[i];
+      var 目标id = 按钮.getAttribute("data-面板");
+      var 选中 = 目标id === 面板id;
+      按钮.classList.toggle("选中", 选中);
+      按钮.setAttribute("aria-selected", 选中 ? "true" : "false");
+      var 面板 = document.getElementById(目标id);
+      if (面板) 面板.hidden = !选中;
+    }
+    if (记住 !== false) {
+      try {
+        localStorage.setItem(左栏面板键, 面板id);
+      } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
+    }
+  }
+
+  function 初始化左栏() {
+    var 保存 = null;
+    try {
+      保存 = localStorage.getItem(左栏面板键);
+    } catch (e) { /* 忽略 */ }
+    // 没设目标时优先摊开「我的目标」，新用户不必自己找入口
+    var 初始 = 初始左栏面板(保存, Boolean(读目标()));
+    切换左栏面板(初始, false);
+
+    var 按钮集 = document.querySelectorAll(".左栏标签按钮");
+    for (var i = 0; i < 按钮集.length; i++) {
+      (function (按钮) {
+        按钮.addEventListener("click", function () {
+          切换左栏面板(按钮.getAttribute("data-面板"));
+        });
+      })(按钮集[i]);
+    }
+
+    // 首屏空状态引导：一键切到设置面板并展开表单
+    取元素("去设置按钮").addEventListener("click", function () {
+      切换左栏面板("设置卡片");
+      折叠设置(false);
+      取元素("设置卡片").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
   function 初始化区块导航() {
     var 导航 = 取元素("区块导航");
     var 按钮集 = 导航.querySelectorAll(".区块导航按钮");
 
     for (var i = 0; i < 按钮集.length; i++) {
       (function (按钮) {
-        var 目标 = document.getElementById(按钮.getAttribute("data-目标"));
+        var 目标id = 按钮.getAttribute("data-目标");
+        var 目标 = document.getElementById(目标id);
         if (!目标) return;
         按钮.addEventListener("click", function () {
-          目标.scrollIntoView({ behavior: "smooth", block: "start" });
+          // 左栏面板默认隐藏，跳转前先切到对应标签，否则滚过去也看不见
+          if (左栏面板集.indexOf(目标id) !== -1) {
+            切换左栏面板(目标id);
+            目标.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          } else {
+            目标.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
           for (var k = 0; k < 按钮集.length; k++) {
             按钮集[k].classList.toggle("选中", 按钮集[k] === 按钮);
           }
@@ -1446,6 +1512,7 @@
     渲染动作();
     渲染历史();
     刷新所有();
+    初始化左栏();
     初始化主分区();
     初始化区块导航();
   }
@@ -1463,6 +1530,7 @@
     按偏移取段: 按偏移取段,
     专区显示条数: 专区显示条数,
     专区默认条数: 专区默认条数,
+    初始左栏面板: 初始左栏面板,
     折算份量: 折算份量,
     截断历史: 截断历史,
     生成一周计划: 生成一周计划,
