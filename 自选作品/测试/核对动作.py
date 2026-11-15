@@ -92,6 +92,8 @@ for i, 动作 in enumerate(数据):
             错误.append(f"{位置} 图片必须是本地文件: {图片}")
         elif not (根 / 图片).exists():
             错误.append(f"{位置} 图片文件不存在: {图片}")
+        elif (根 / 图片).stat().st_size < 1024:
+            错误.append(f"{位置} 图片文件过小，疑似损坏: {图片}")
 
 # 部位覆盖统计
 print(f"动作总数: {len(数据)}")
