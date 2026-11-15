@@ -66,13 +66,18 @@
 
       </div><!-- /首屏网格 -->
 
-      <!-- 区块导航：饮食分区内快速跳转（吸顶，训练分区隐藏） -->
-      <nav class="区块导航" id="区块导航" aria-label="饮食分区内快速跳转">
-        <span class="区块导航标记">快速跳转</span>
+      <!-- 区块切换：饮食分区内一次只看一个区块（训练分区隐藏）。
+           原为「滚动跳转」，同学反馈点击后仍需一直往下划才看到内容，
+           改为切换显示：点哪个只显示哪个，一次到位。 -->
+      <nav class="区块导航" id="区块导航" aria-label="饮食分区内切换区块">
+        <span class="区块导航标记">查看</span>
         <button type="button" class="区块导航按钮 选中" data-目标="进度卡片">今日摄入</button>
         <button type="button" class="区块导航按钮" data-目标="推荐卡片">为你推荐</button>
+        <button type="button" class="区块导航按钮" data-目标="设置卡片">我的目标</button>
+        <button type="button" class="区块导航按钮" data-目标="记录卡片">今日已记录</button>
         <button type="button" class="区块导航按钮" data-目标="计划卡片">一周计划</button>
         <button type="button" class="区块导航按钮" data-目标="专区卡片">食谱专区</button>
+        <button type="button" class="区块导航按钮" data-目标="历史卡片">近 7 天</button>
       </nav>
 
       <div class="饮食布局">

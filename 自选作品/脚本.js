@@ -1,4 +1,4 @@
-﻿/* 食谱搭配 —— 主逻辑
+/* 食谱搭配 —— 主逻辑
  * 数据源：window.食谱数据（见 数据/食谱.js）
  * 记录存储：localStorage，键名 "食谱搭配-今日记录"，值为 [{ id, 名称, ... }]
  */
@@ -1322,25 +1322,105 @@
     } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
   }
 
-  // 饮食分区内的快速跳转：点按钮滚到对应卡片。
-  // 不做滚动联动高亮——桌面端首屏两张卡并排、左右栏也有同高卡片，
-  // 用视口位置反推"当前区块"会来回跳；点击高亮即表示刚跳到哪里。
+  // 饮食分区内的区块切换：点按钮只显示对应区块，其余隐藏。
+  // 原实现用 scrollIntoView 滚动定位，实测问题：
+  //   1) 只滚到卡片顶部，卡片本身很长（如 40 道菜的专区），还要继续往下划
+  //   2) 左右栏同时可见，目标和记录堆在一起，分不清当前在看什么
+  // 改为切换显示：点一次就到位，不再需要滚动。
+  var 区块存储键 = "食谱搭配-当前区块";
+
+  // 每栏的区块清单。点某栏的某个区块时，该栏只显示它；
+  // 另一栏显示自己的「常用区块」，避免出现整栏空白。
+  var 栏区块表 = {
+    首屏: ["进度卡片", "推荐卡片"],
+    左栏: ["设置卡片", "记录卡片", "历史卡片"],
+    右栏: ["计划卡片", "专区卡片"]
+  };
+  // 另一栏跟随显示的区块：看右栏内容时左栏显示记录（最常看）；
+  // 看左栏内容时右栏显示计划（占位即可）。
+  var 栏跟随区块 = {
+    左栏: "记录卡片",
+    右栏: "计划卡片"
+  };
+  var 区到栏 = {};
+  Object.keys(栏区块表).forEach(function (栏) {
+    栏区块表[栏].forEach(function (id) { 区到栏[id] = 栏; });
+  });
+
+  function 应用区块(目标id) {
+    var 目标栏 = 区到栏[目标id];
+    if (!目标栏) return;
+
+    // 首屏整体控制：非首屏区块被选中时，整块首屏隐藏，避免顶部单独留一张卡
+    var 首屏网格 = document.querySelector(".首屏网格");
+    if (首屏网格) 首屏网格.hidden = (目标栏 !== "首屏");
+
+    Object.keys(栏区块表).forEach(function (栏) {
+      if (栏 === "首屏") return;   // 首屏已整体处理
+
+      var 本栏要显示的;
+      if (栏 === 目标栏) {
+        本栏要显示的 = [目标id];
+      } else {
+        本栏要显示的 = [栏跟随区块[栏]];
+      }
+
+      栏区块表[栏].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.hidden = 本栏要显示的.indexOf(id) === -1;
+      });
+    });
+
+    // 回到首屏时，两张卡都要显示
+    if (目标栏 === "首屏") {
+      栏区块表["首屏"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.hidden = false;
+      });
+    }
+
+    // 左栏的「设置卡片」用紧凑摘要展示（不展开长表单），
+    // 只有用户主动点「我的目标」时才展开完整表单。
+    if (目标栏 !== "左栏") {
+      var 设置主体 = 取元素("设置主体");
+      if (设置主体) 设置主体.hidden = true;
+    }
+
+    try {
+      localStorage.setItem(区块存储键, 目标id);
+    } catch (e) { /* 隐私模式写入失败，忽略 */ }
+  }
+
   function 初始化区块导航() {
     var 导航 = 取元素("区块导航");
+    if (!导航) return;
     var 按钮集 = 导航.querySelectorAll(".区块导航按钮");
+
+    function 高亮(目标id) {
+      for (var k = 0; k < 按钮集.length; k++) {
+        var 是 = 按钮集[k].getAttribute("data-目标") === 目标id;
+        按钮集[k].classList.toggle("选中", 是);
+        按钮集[k].setAttribute("aria-selected", 是 ? "true" : "false");
+      }
+    }
 
     for (var i = 0; i < 按钮集.length; i++) {
       (function (按钮) {
-        var 目标 = document.getElementById(按钮.getAttribute("data-目标"));
-        if (!目标) return;
         按钮.addEventListener("click", function () {
-          目标.scrollIntoView({ behavior: "smooth", block: "start" });
-          for (var k = 0; k < 按钮集.length; k++) {
-            按钮集[k].classList.toggle("选中", 按钮集[k] === 按钮);
-          }
+          var 目标id = 按钮.getAttribute("data-目标");
+          if (!目标id || !document.getElementById(目标id)) return;
+          应用区块(目标id);
+          高亮(目标id);
         });
       })(按钮集[i]);
     }
+
+    // 恢复上次查看的区块，默认「今日摄入」
+    var 上次 = null;
+    try { 上次 = localStorage.getItem(区块存储键); } catch (e) { /* 忽略 */ }
+    if (!上次 || !document.getElementById(上次)) 上次 = "进度卡片";
+    应用区块(上次);
+    高亮(上次);
   }
 
   function 初始化主分区() {
