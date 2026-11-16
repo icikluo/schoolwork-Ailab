@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M1 反馈层 · 浏览器对拍</title>
+<style>
+  body { margin:0; padding:24px; background:#F4F1E8; color:#2C2C2A;
+         font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; font-size:14px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 8px; }
+  p { color:#6F6D64; font-size:13px; line-height:1.7; margin:0 0 14px; }
+  /* 目的：给注入逻辑一个真实的侧栏容器；其余结构由 养成反馈.js 自建 */
+  .侧栏 { width:224px; padding:18px 12px; border-radius:10px; color:#E7F1DA;
+          background:linear-gradient(180deg,#27500A,#1D4007); }
+  .侧栏目标 { margin-bottom:10px; font-size:12px; }
+  pre { margin-top:18px; padding:14px 16px; background:#fff; border:1px solid #E5E2D5;
+        border-radius:10px; font-size:12.5px; line-height:1.9; white-space:pre-wrap; }
+  .好 { color:#3B6D11; } .坏 { color:#B23A3A; }
+</style>
+</head>
+<body>
+<h1>M1 反馈层 · 浏览器对拍</h1>
+<p>用真实 <b>养成.js + 养成反馈.js</b>（不是 Python 复刻）跑一遍打卡、换天、上限、达标、升级、流水与 DOM 注入。</p>
+
+<aside class="侧栏">
+  <div class="侧栏目标"><b id="侧栏目标">—</b></div>
+</aside>
+
+<pre id="结果">运行中…</pre>
+
+<script src="../数据/装扮.js"></script>
+<script src="../数据/家具.js"></script>
+<script src="../养成.js"></script>
+<script src="../养成反馈.js"></script>
+<script>
+(document.addEventListener("DOMContentLoaded", function () { setTimeout(跑, 0); }));
+
+function 跑() {
+  var A = window.养成反馈, G = window.养成系统;
+  var 通过 = 0, 失败 = [], 明细 = [];
+
+  function 断(名, 真, 实) {
+    if (真) { 通过++; 明细.push("  ✓ " + 名); }
+    else { 失败.push(名 + "（实际：" + 实 + "）"); 明细.push("  ✗ " + 名 + "（实际：" + 实 + "）"); }
+  }
+  function 清() {
+    ["存档", "每日", "流水", "场景"].forEach(function (k) {
+      try { localStorage.removeItem(A.键[k]); } catch (e) {}
+    });
+  }
+  function 日(n) { return "2026-11-" + ("0" + n).slice(-2); }
+
+  // ---------- 1. 首次打卡 ----------
+  清();
+  var r1 = A.结算("早", { 今天: 日(16), 小时: 8 });
+  断("首次打卡结果=已完成", r1.结果 === "已完成", r1.结果);
+  断("首次 +20 经验 +5 金币", r1.获得.经验 === 20 && r1.获得.金币 === 5, JSON.stringify(r1.获得));
+  var s1 = A.快照();
+  断("存档经验=20", s1.存档.经验 === 20, s1.存档.经验);
+  断("每日三餐=[早]", s1.每日.三餐.join(",") === "早", s1.每日.三餐.join(","));
+  断("连签=1", s1.存档.连续天数 === 1, s1.存档.连续天数);
+  断("流水 1 条", s1.流水.length === 1, s1.流水.length);
+  断("流水记了来源", s1.流水[0] && s1.流水[0].来源 === "早", s1.流水[0] && s1.流水[0].来源);
+
+  // ---------- 2. 同一餐重复点 ----------
+  var r2 = A.结算("早", { 今天: 日(16), 小时: 8 });
+  断("重复打卡=已完成但不加经验", r2.结果 === "已完成" && r2.获得.经验 === 0, r2.结果 + "/" + r2.获得.经验);
+  断("重复后经验仍 20", A.快照().存档.经验 === 20, A.快照().存档.经验);
+
+  // ---------- 3. 21 点后「加餐」兜底成晚（R1） ----------
+  var r3 = A.结算("加餐", { 今天: 日(16), 小时: 21 });
+  断("加餐兜底成晚并得分", r3.结果 === "已完成" && r3.来源 === "晚", r3.结果 + "/" + r3.来源);
+  断("每日含晚", A.快照().每日.三餐.indexOf("晚") !== -1, A.快照().每日.三餐.join(","));
+
+  // ---------- 4. 第二顿加餐静默 ----------
+  var r4 = A.结算("加餐", { 今天: 日(16), 小时: 22 });
+  断("第二顿加餐不打卡", r4.结果 === "不打卡" && r4.获得.经验 === 0, r4.结果);
+
+  // ---------- 5. 计划页「标记已吃」时间窗（R2） ----------
+  var r5 = A.结算("晚", { 今天: 日(17), 小时: 8, 强制: true });
+  断("早上 8 点强制晚餐被拦", r5.结果 === "未到餐点", r5.结果);
+  断("被拦后当天三餐仍为空", A.快照().每日.日期 === 日(17) && A.快照().每日.三餐.length === 0,
+     A.快照().每日.日期 + "/" + A.快照().每日.三餐.join(","));
+  var r6 = A.结算("早", { 今天: 日(17), 小时: 8, 强制: true });
+  断("早上 8 点强制早餐成交", r6.结果 === "已完成", r6.结果);
+  断("换天后三餐重置为新一天", A.快照().每日.三餐.join(",") === "早", A.快照().每日.三餐.join(","));
+  断("连签 16→17 连上=2", A.快照().存档.连续天数 === 2, A.快照().存档.连续天数);
+
+  // ---------- 6. 断签重置 ----------
+  A.结算("早", { 今天: 日(19), 小时: 8 });   // 跳过 18 号
+  断("断签后从 1 重新计", A.快照().存档.连续天数 === 1, A.快照().存档.连续天数);
+
+  // ---------- 7. 达标奖励只给一次 ----------
+  清();
+  A.结算("早", { 今天: 日(20), 小时: 8 });
+  A.结算("午", { 今天: 日(20), 小时: 12 });
+  A.结算("晚", { 今天: 日(20), 小时: 19 });
+  for (var i = 0; i < 6; i++) A.结算("喝水", { 今天: 日(20), 小时: 10 + i });
+  var r7 = A.结算("运动", { 今天: 日(20), 小时: 18 });
+  断("三项齐了触发达标", r7.是否刚达标 === true, r7.是否刚达标);
+  断("达标当次 = 运动30 + 达标50", r7.获得.经验 === 80, r7.获得.经验);
+  断("达标金币含 +20", r7.获得.金币 === 28, r7.获得.金币);
+  var s7 = A.快照();
+  断("达标当天总经验 60+30+80=170", s7.存档.经验 === 170, s7.存档.经验);
+  断("170 经验升到 Lv.2", s7.等级.等级 === 2 && s7.等级.级内经验 === 70, s7.等级.等级 + "/" + s7.等级.级内经验);
+  var r8 = A.结算("运动", { 今天: 日(20), 小时: 19 });
+  断("再运动不重复发达标", r8.是否刚达标 === false && r8.获得.经验 === 30, r8.是否刚达标 + "/" + r8.获得.经验);
+
+  // ---------- 8. 喝水上限 ----------
+  清();
+  var 末次;
+  for (var j = 1; j <= 8; j++) 末次 = A.结算("喝水", { 今天: 日(21), 小时: 9 + j });
+  断("第 8 次喝水仍计分", 末次.结果 === "已完成" && A.快照().每日.喝水 === 8, 末次.结果 + "/" + A.快照().每日.喝水);
+  var r9 = A.结算("喝水", { 今天: 日(21), 小时: 20 });
+  断("第 9 次喝水=已上限", r9.结果 === "已上限" && r9.获得.经验 === 0, r9.结果);
+
+  // ---------- 9. 家具加成（场景读的是独立存储键） ----------
+  清();
+  try {
+    localStorage.setItem(A.键.场景, JSON.stringify({
+      "墙纸": "米白", "地板": "木地板", "相机": { "yaw": 0 },
+      "家具": [{ "id": "家具-小沙发", "x": 0, "z": 0 }, null, null, null, null, null]
+    }));
+  } catch (e) {}
+  var r10 = A.结算("早", { 今天: 日(22), 小时: 8 });
+  断("摆沙发后金币 5→6（+10% 加成）", r10.获得.金币 === 6, r10.获得.金币);
+
+  // ---------- 10. 流水上限 30 ----------
+  清();
+  for (var k = 1; k <= 40; k++) A.结算("早", { 今天: "2026-" + (k <= 12 ? "11" : "12") + "-" + ("0" + ((k - 1) % 28 + 1)).slice(-2), 小时: 8 });
+  断("流水最多留 30 条", A.快照().流水.length === 30, A.快照().流水.length);
+
+  // ---------- 11. 今日获得从流水求和（R7） ----------
+  // 这一段必须用「真实的今天」，因为 刷新经验块 的文案是按系统时间算的
+  var d0 = new Date();
+  var 真今天 = d0.getFullYear() + "-" + ("0" + (d0.getMonth() + 1)).slice(-2) + "-" + ("0" + d0.getDate()).slice(-2);
+  清();
+  A.结算("早", { 今天: 真今天, 小时: 8 });
+  A.结算("午", { 今天: 真今天, 小时: 12 });
+  断("今日获得=40 经验", A.今日获得(真今天).经验 === 40, A.今日获得(真今天).经验);
+  断("别的日期不算今天", A.今日获得(日(24)).经验 === 0, A.今日获得(日(24)).经验);
+
+  // ---------- 12. DOM 层 ----------
+  断("注入侧栏经验块", !!document.getElementById("养成经验块"), "未注入");
+  断("注入窄屏胶囊", !!document.getElementById("养成胶囊"), "未注入");
+  A.刷新经验块();
+  断("等级文本形如 Lv.2", /^Lv\.\d+$/.test(document.getElementById("养成等级").textContent),
+     document.getElementById("养成等级").textContent);
+  断("金币文本带数字", /\d/.test(document.getElementById("养成金币").textContent),
+     document.getElementById("养成金币").textContent);
+  断("进度条宽度是百分比", /%$/.test(document.getElementById("养成进度").style.width),
+     document.getElementById("养成进度").style.width);
+  断("今日文案显示 +40 经验", /\+40/.test(document.getElementById("养成注").textContent),
+     document.getElementById("养成注").textContent);
+
+  // ---------- 13. 浮层文案 ----------
+  清();
+  A.餐后结算("早");
+  断("首次打卡弹一条浮层", document.querySelectorAll(".养成提示").length === 1,
+     document.querySelectorAll(".养成提示").length);
+  断("浮层写了 +20 经验", /\+20/.test(document.querySelector(".养成提示 b").textContent),
+     document.querySelector(".养成提示 b").textContent);
+  A.餐后结算("早");
+  断("重复打卡弹「已经打过卡」", /已经打过卡/.test(document.querySelectorAll(".养成提示")[1].textContent),
+     document.querySelectorAll(".养成提示")[1].textContent);
+
+  // ---------- 14. 存储键 ----------
+  断("写入 3 个基础键", !!localStorage.getItem(A.键.存档) && !!localStorage.getItem(A.键.每日) && !!localStorage.getItem(A.键.流水),
+     "缺键");
+
+  // 清干净，别污染真实使用
+  清();
+
+  var 结论 = 失败.length === 0
+    ? '<span class="好">全部通过</span>：' + 通过 + " 项 / 0 失败"
+    : '<span class="坏">有失败</span>：' + 通过 + " 通过 / " + 失败.length + " 失败\n\n" + 失败.join("\n");
+  document.getElementById("结果").innerHTML =
+    结论 + "\n\n明细：\n" + 明细.join("\n");
+  window.对拍结果 = { 通过: 通过, 失败: 失败 };
+  console.log("M1 对拍：", window.对拍结果);
+}
+</script>
+</body>
+</html>

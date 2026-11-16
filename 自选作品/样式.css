@@ -900,3 +900,124 @@ button {
   }
   html { scroll-behavior: auto; }
 }
+
+/* ---------- 养成系统 · 反馈层（M1） ----------
+ * 由 养成反馈.js 动态注入，页面 HTML 里没有这些结构。
+ * 侧栏经验块沿用侧栏的深绿底；胶囊只在窄屏出现（R10：手机上不能没有经验反馈）。
+ */
+.侧栏养成 {
+  padding: 10px 12px 11px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.养成头 { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.养成等级 {
+  font-family: var(--衬线);
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
+}
+.养成星 { flex: 1; font-size: 10px; letter-spacing: 1px; color: #F2C75C; }
+.养成金币 { font-size: 11px; color: #F2E3BE; font-variant-numeric: tabular-nums; }
+.养成条 {
+  height: 6px;
+  margin: 8px 0 6px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.30);
+  overflow: hidden;
+}
+.养成条 i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #A8CE6B 0%, #F2C75C 100%);
+  transition: width 0.45s ease-out;
+}
+.养成注 { font-size: 11px; color: #C9DDB2; line-height: 1.5; }
+
+/* 窄屏胶囊：Lv.3 · 320/500 · 42（贴底，拇指可及） */
+.养成胶囊 {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 60;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  border-radius: 99px;
+  border: 1px solid rgba(39, 80, 10, 0.16);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 20px rgba(39, 80, 10, 0.16);
+  color: var(--绿-深);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.养成胶囊 span:first-child { font-weight: 600; }
+.养成胶囊 .胶囊分隔 { color: var(--边框-深); }
+.养成胶囊 #胶囊进度 { color: var(--文字-淡); }
+.养成胶囊 #胶囊金币 { color: var(--黄-字); }
+
+/* 打卡浮层 */
+.养成浮层 {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.养成提示 {
+  min-width: 176px;
+  max-width: 260px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid var(--绿-边);
+  box-shadow: 0 8px 24px rgba(39, 80, 10, 0.16);
+  animation: 浮入 0.28s ease-out;
+}
+.养成提示 b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--绿-深);
+  font-variant-numeric: tabular-nums;
+}
+.养成提示 span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--文字-淡);
+  line-height: 1.5;
+}
+.养成提示.喜 { border-color: #E8C77A; background: #FFFBF0; }
+.养成提示.喜 b { color: #8A6410; }
+.养成提示.淡 { opacity: 0.9; }
+.养成提示.淡出 { animation: 浮出 0.45s ease-in forwards; }
+
+@keyframes 浮入 {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes 浮出 {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@media (max-width: 900px) {
+  .侧栏养成 { display: none; }
+  .养成胶囊 { display: flex; }
+  .养成浮层 { left: 50%; right: auto; bottom: 68px; transform: translateX(-50%); align-items: center; }
+  .养成提示 { min-width: 0; }
+  .主体 { padding-bottom: 68px; }
+  .养成胶囊 { bottom: 12px; padding: 6px 14px; gap: 4px; }
+}
