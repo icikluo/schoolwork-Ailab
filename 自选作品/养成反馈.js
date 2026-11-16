@@ -1,11 +1,11 @@
-/* 养成反馈层（M1）
+/* 养成反馈层（M1 任务区 M3）
  * 把 养成.js 的纯函数接到真实页面上。
  *
  * 职责边界：
  *   · 读写 4 个存储键（存档 / 每日 / 流水 / 场景）
  *   · 换天归一（每日清零，等级与金币在存档里不动）
- *   · 侧栏经验块、手机胶囊、打卡浮层（全部由本文件自建自销）
- *   · 对外的打卡入口：餐后结算(餐次, 强制)
+ *   · 侧栏经验块、今日任务区、手机胶囊、打卡浮层（全部由本文件自建自销）
+ *   · 对外的打卡入口：餐后结算(餐次, 强制) —— 三餐来自记录页，喝水/运动来自任务区按钮
  *
  * 设计约束：
  *   · 页面 HTML 不写任何养成相关结构，只引脚本；渲染失败不会让页面变空。
@@ -126,6 +126,118 @@
     return 结果;
   }
 
+  // ============ 任务区（M3） ============
+
+  // 展示用的每日：换了天但今天还没有任何操作时，存储里仍是昨天的进度，
+  // 任务区直接按「全空」画（不落盘——写入只在 结算 里发生，见 M1 的教训）。
+  function 展示每日() {
+    var d = 读每日();
+    var 今天 = 今日串();
+    if (!d || d.日期 !== 今天) return 养成系统.默认每日(今天);
+    return d;
+  }
+
+  function 任务状态() {
+    var d = 展示每日();
+    var 目 = 养成系统.每日目标, 限 = 养成系统.每日上限;
+    var 三餐 = d.三餐 || [];
+    function 有(餐) { return 三餐.indexOf(餐) !== -1; }
+    return {
+      "日期": d.日期,
+      "早": 有("早"), "午": 有("午"), "晚": 有("晚"),
+      "三餐数": 三餐.length, "三餐目标": 目.三餐,
+      "喝水": d.喝水 || 0, "喝水目标": 目.喝水, "喝水上限": 限.喝水,
+      "运动": d.运动 || 0, "运动目标": 目.运动, "运动上限": 限.运动,
+      "已达标": !!d.达标
+    };
+  }
+
+  function 造行() {
+    var 行 = document.createElement("div");
+    行.className = "任务行";
+    return 行;
+  }
+
+  // 三餐卡：进度是早/午/晚三个圆片，打卡入口在记录页（记录一餐就自动结算）
+  function 画三餐行(容器, s) {
+    var 行 = 造行();
+    行.innerHTML =
+      '<span class="任务图标" aria-hidden="true">🍚</span>' +
+      '<span class="任务名">三餐</span>';
+    var 点 = document.createElement("span");
+    点.className = "餐点";
+    点.setAttribute("aria-label", "三餐 " + s.三餐数 + "/" + s.三餐目标);
+    ["早", "午", "晚"].forEach(function (餐) {
+      var i = document.createElement("i");
+      if (s[餐]) i.className = "完成";
+      i.textContent = 餐;
+      点.appendChild(i);
+    });
+    行.appendChild(点);
+    var 数 = document.createElement("span");
+    数.className = "任务数";
+    数.textContent = s.三餐数 + "/" + s.三餐目标;
+    行.appendChild(数);
+    if (location.pathname.indexOf("记录.html") === -1) {
+      var 链 = document.createElement("a");
+      链.className = "任务链接";
+      链.href = "记录.html";
+      链.title = "在记录页写一餐就自动打卡";
+      链.textContent = "记一餐";
+      行.appendChild(链);
+    }
+    容器.appendChild(行);
+  }
+
+  // 喝水 / 运动卡：目标线达标即可，上限前按钮一直可用（R3：达标线低于上限）
+  function 画计数行(容器, s, 键, 图标, 名, 钮文, 达标提示) {
+    var 数 = s[键], 目标 = s[键 + "目标"], 上限 = s[键 + "上限"];
+    var 满 = 数 >= 上限, 达 = 数 >= 目标;
+    var 行 = 造行();
+    if (满) 行.className += " 满";
+    行.innerHTML =
+      '<span class="任务图标" aria-hidden="true">' + 图标 + '</span>' +
+      '<span class="任务名">' + 名 + '</span>';
+    var 条 = document.createElement("span");
+    条.className = "任务条";
+    条.setAttribute("role", "progressbar");
+    条.setAttribute("aria-label", 名 + "进度");
+    var 填 = document.createElement("i");
+    填.style.width = Math.min(100, Math.round(数 / 目标 * 100)) + "%";
+    条.appendChild(填);
+    行.appendChild(条);
+    var 数字 = document.createElement("span");
+    数字.className = "任务数";
+    数字.textContent = 满 ? 数 + "/" + 上限 : (达 ? 目标 + "/" + 目标 + " ✓" : 数 + "/" + 目标);
+    行.appendChild(数字);
+    var 钮 = document.createElement("button");
+    钮.type = "button";
+    钮.className = "任务钮";
+    钮.textContent = 满 ? "已满" : 钮文;
+    钮.disabled = 满;
+    if (达 && !满) 钮.title = 达标提示;
+    if (满) 钮.title = "今天到上限了，明天再来";
+    钮.setAttribute("aria-label", 名 + "打卡");
+    钮.addEventListener("click", function () { 餐后结算(键, false); });
+    行.appendChild(钮);
+    容器.appendChild(行);
+  }
+
+  function 画任务区(容器) {
+    if (!容器) return;
+    var s = 任务状态();
+    容器.innerHTML = "";
+    var 头 = document.createElement("div");
+    头.className = "任务头";
+    头.innerHTML =
+      '<span class="任务头名">今日任务</span>' +
+      '<span class="任务徽章' + (s.已达标 ? " 亮" : "") + '">🏅 今日达标</span>';
+    容器.appendChild(头);
+    画三餐行(容器, s);
+    画计数行(容器, s, "喝水", "💧", "喝水", "+1 杯", "已达目标，多喝还有经验，8 杯封顶");
+    画计数行(容器, s, "运动", "🏃", "运动", "+1 次", "已达目标，多练还有经验，3 次封顶");
+  }
+
   // ============ 视图 ============
   function 取元素(id) { return document.getElementById(id); }
 
@@ -154,22 +266,78 @@
     钮.innerHTML = '<span id="胶囊等级">Lv.1</span>' +
       '<span class="胶囊分隔">·</span><span id="胶囊进度">0/100</span>' +
       '<span class="胶囊分隔">·</span><span id="胶囊金币">0 币</span>';
-    钮.title = "养成进度（查看小窝在「养成」页，M2 上线）";
-    钮.addEventListener("click", function () {
-      弹提示("小窝在下一版上线", "现在打卡就能先攒经验和金币", "淡");
-    });
+    钮.title = "今日任务 · 点开快速打卡";
+    钮.setAttribute("aria-expanded", "false");
     return 钮;
+  }
+
+  // 手机任务板：胶囊点开弹出，内容与侧栏任务区同一份 画任务区
+  function 开任务板(开) {
+    var 板 = 取元素("养成任务板"), 钮 = 取元素("养成胶囊");
+    if (!板) return;
+    if (开) 画任务区(板.querySelector(".任务区"));
+    板.classList.toggle("开", 开);
+    if (钮) 钮.setAttribute("aria-expanded", 开 ? "true" : "false");
+  }
+
+  function 造任务板() {
+    var 板 = document.createElement("div");
+    板.className = "任务板 任务浅";
+    板.id = "养成任务板";
+    板.innerHTML = '<div class="任务区"></div>' +
+      '<div class="任务板底">' +
+        '<a href="养成.html">去小窝看看 →</a>' +
+        '<button type="button" class="任务板关">收起</button>' +
+      '</div>';
+    板.querySelector(".任务板关").addEventListener("click", function () { 开任务板(false); });
+    return 板;
   }
 
   function 注入() {
     var 侧栏 = document.querySelector(".侧栏");
+    // 小窝页的任务区在正文里（手机质感的组件），侧栏不再重复放一份
+    var 在小窝页 = document.body.getAttribute("data-页面") === "小窝";
     if (侧栏 && !取元素("养成经验块")) {
       var 块 = 造经验块();
       var 目标块 = 侧栏.querySelector(".侧栏目标");
       if (目标块 && 目标块.nextSibling) 侧栏.insertBefore(块, 目标块.nextSibling);
       else 侧栏.appendChild(块);
     }
-    if (!取元素("养成胶囊")) document.body.appendChild(造胶囊());
+    if (侧栏 && !在小窝页 && !取元素("养成任务块")) {
+      var 任务 = document.createElement("div");
+      任务.className = "侧栏养成 任务块";
+      任务.id = "养成任务块";
+      var 经验块 = 取元素("养成经验块");
+      if (经验块 && 经验块.nextSibling) 侧栏.insertBefore(任务, 经验块.nextSibling);
+      else 侧栏.appendChild(任务);
+    }
+    if (!取元素("养成胶囊")) {
+      var 胶囊 = 造胶囊();
+      胶囊.addEventListener("click", function (事件) {
+        事件.stopPropagation();
+        开任务板(!取元素("养成任务板").classList.contains("开"));
+      });
+      document.body.appendChild(胶囊);
+    }
+    if (!取元素("养成任务板")) document.body.appendChild(造任务板());
+    // 点到任务板外面就收起（胶囊自己的点击已 stopPropagation）
+    if (!注入.已挂外点) {
+      注入.已挂外点 = true;
+      document.addEventListener("click", function (事件) {
+        var 板 = 取元素("养成任务板");
+        if (板 && 板.classList.contains("开") && !板.contains(事件.target)) 开任务板(false);
+      });
+    }
+  }
+
+  function 刷新任务区() {
+    var 块 = 取元素("养成任务块");
+    if (块) 画任务区(块);
+    // 小窝页正文里的手机组件（生成养成页.py 放的静态容器）
+    var 窝 = 取元素("小窝任务区");
+    if (窝) 画任务区(窝);
+    var 板 = 取元素("养成任务板");
+    if (板 && 板.classList.contains("开")) 画任务区(板.querySelector(".任务区"));
   }
 
   function 刷新经验块() {
@@ -209,6 +377,8 @@
     if (胶进) 胶进.textContent = 进度文本;
     var 胶金 = 取元素("胶囊金币");
     if (胶金) 胶金.textContent = 金币 + " 币";
+
+    刷新任务区();
   }
 
   // ============ 浮层 ============
@@ -318,7 +488,12 @@
     "弹提示": 弹提示,
     "今日获得": 今日获得,
     "快照": 快照,
-    "启动": 启动
+    "启动": 启动,
+    "任务状态": 任务状态,
+    "画任务区": 画任务区,
+    "刷新任务区": 刷新任务区,
+    "开任务板": 开任务板,
+    "注入": 注入
   };
 
   if (document.readyState === "loading") {

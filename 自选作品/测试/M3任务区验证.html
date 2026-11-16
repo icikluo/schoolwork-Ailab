@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M3 任务区 · 浏览器验证</title>
+<style>
+  body { margin:0; padding:24px; background:#F4F1E8; color:#2C2C2A;
+         font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; font-size:14px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 8px; }
+  p { color:#6F6D64; font-size:13px; line-height:1.7; margin:0 0 14px; }
+  /* 给注入逻辑一个真实的侧栏容器；任务块 / 任务板由 养成反馈.js 自建 */
+  .侧栏 { width:224px; padding:18px 12px; border-radius:10px; color:#E7F1DA;
+          background:linear-gradient(180deg,#27500A,#1D4007); }
+  .侧栏目标 { margin-bottom:10px; font-size:12px; }
+  pre { margin-top:18px; padding:14px 16px; background:#fff; border:1px solid #E5E2D5;
+        border-radius:10px; font-size:12.5px; line-height:1.9; white-space:pre-wrap; }
+  .好 { color:#3B6D11; } .坏 { color:#B23A3A; }
+</style>
+</head>
+<body>
+<h1>M3 任务区 · 浏览器验证</h1>
+<p>用真实 <b>养成.js + 养成反馈.js</b>（不是 Python 复刻）验证任务区三卡、达标徽章、上限灰化、换天重置与手机任务板。</p>
+
+<aside class="侧栏">
+  <div class="侧栏目标"><b id="侧栏目标">—</b></div>
+</aside>
+
+<pre id="结果">运行中…</pre>
+
+<script src="../数据/装扮.js"></script>
+<script src="../数据/家具.js"></script>
+<script src="../养成.js"></script>
+<script src="../养成反馈.js"></script>
+<script>
+window.onerror = function (msg, src, line) {
+  document.getElementById("结果").textContent = "运行错误：" + msg + " @ " + line;
+};
+(document.addEventListener("DOMContentLoaded", function () { setTimeout(跑, 0); }));
+
+function 跑() {
+  var A = window.养成反馈, G = window.养成系统;
+  var 通过 = 0, 失败 = [], 明细 = [];
+
+  function 断(名, 真, 实) {
+    if (真) { 通过++; 明细.push("  ✓ " + 名); }
+    else { 失败.push(名 + "（实际：" + 实 + "）"); 明细.push("  ✗ " + 名 + "（实际：" + 实 + "）"); }
+  }
+  function 清() {
+    ["存档", "每日", "流水", "场景"].forEach(function (k) {
+      try { localStorage.removeItem(A.键[k]); } catch (e) {}
+    });
+  }
+  function 日(n) { return "2026-11-" + ("0" + n).slice(-2); }
+  function 取(id) { return document.getElementById(id); }
+  function 任务块() { return 取("养成任务块"); }
+  function 行(序) { return 任务块().querySelectorAll(".任务行")[序]; }
+  function 钮(序) { return 行(序).querySelector(".任务钮"); }
+  var 提示们 = function () { return document.querySelectorAll(".养成提示"); };
+
+  // ---------- 1. 注入与初始状态 ----------
+  清();
+  A.刷新经验块();
+  断("注入侧栏任务块", !!任务块(), "未注入");
+  断("注入手机任务板", !!取("养成任务板"), "未注入");
+  断("任务块里有三行卡", 任务块().querySelectorAll(".任务行").length === 3,
+     任务块().querySelectorAll(".任务行").length);
+  断("初始喝水 0/6", 行(1).querySelector(".任务数").textContent === "0/6",
+     行(1).querySelector(".任务数").textContent);
+  断("初始运动 0/1", 行(2).querySelector(".任务数").textContent === "0/1",
+     行(2).querySelector(".任务数").textContent);
+  断("初始三餐 0/3", 行(0).querySelector(".任务数").textContent === "0/3",
+     行(0).querySelector(".任务数").textContent);
+  断("初始徽章隐藏", !任务块().querySelector(".任务徽章").classList.contains("亮"),
+     "徽章亮了");
+  断("喝水钮可点", !钮(1).disabled, "被禁用");
+  断("三餐行链接指向记录页", 行(0).querySelector("a.任务链接") &&
+     行(0).querySelector("a.任务链接").getAttribute("href") === "记录.html",
+     行(0).querySelector("a.任务链接") && 行(0).querySelector("a.任务链接").getAttribute("href"));
+
+  // ---------- 2. 任务状态（纯读，不落盘） ----------
+  var s2 = A.任务状态();
+  断("任务状态：三项全空", s2.三餐数 === 0 && s2.喝水 === 0 && s2.运动 === 0 && !s2.已达标,
+     s2.三餐数 + "/" + s2.喝水 + "/" + s2.运动);
+  断("任务状态：目标与上限来自规则层",
+     s2.喝水目标 === 6 && s2.喝水上限 === 8 && s2.运动目标 === 1 && s2.运动上限 === 3,
+     s2.喝水目标 + "/" + s2.喝水上限 + "/" + s2.运动目标 + "/" + s2.运动上限);
+
+  // ---------- 3. 喝水 8 次：第 8 次仍计分，之后灰化（R3 / M3 验收） ----------
+  var r3;
+  for (var i = 1; i <= 8; i++) r3 = A.餐后结算("喝水");
+  断("第 8 次喝水仍得分", r3.得分 === true && A.快照().每日.喝水 === 8,
+     r3.得分 + "/" + A.快照().每日.喝水);
+  断("8 杯后按钮灰化", 钮(1).disabled === true, "未禁用");
+  断("8 杯后行带满标记", 行(1).classList.contains("满"), "无满标记");
+  断("计数显示 8/8", 行(1).querySelector(".任务数").textContent === "8/8",
+     行(1).querySelector(".任务数").textContent);
+  var r3b = A.餐后结算("喝水");
+  断("第 9 杯=已上限且不得分", r3b.结果 === "已上限" && r3b.得分 === false,
+     r3b.结果 + "/" + r3b.得分);
+  var 末条 = 提示们()[提示们().length - 1];
+  断("第 9 杯弹「到上限」提示", 末条 && /上限/.test(末条.textContent),
+     末条 && 末条.textContent);
+
+  // ---------- 4. 运动 3 次灰化 ----------
+  A.餐后结算("运动"); A.餐后结算("运动");
+  断("第 2 次运动后按钮仍可点（上限 3）", !钮(2).disabled, "被禁用");
+  A.餐后结算("运动");
+  断("3 次运动后按钮灰化", 钮(2).disabled === true && 行(2).classList.contains("满"), "未灰化");
+  断("运动计数 3/3", 行(2).querySelector(".任务数").textContent === "3/3",
+     行(2).querySelector(".任务数").textContent);
+
+  // ---------- 5. 三餐打卡联动（记录页走 餐后结算，任务区只读展示） ----------
+  A.餐后结算("早");
+  断("记早饭后三餐行变 1/3", 行(0).querySelector(".任务数").textContent === "1/3",
+     行(0).querySelector(".任务数").textContent);
+  断("「早」圆片点亮", 行(0).querySelectorAll(".餐点 i")[0].classList.contains("完成") &&
+     !行(0).querySelectorAll(".餐点 i")[1].classList.contains("完成"),
+     "圆片状态不对");
+
+  // ---------- 6. 达标徽章与 +50（M3 验收：三项达成弹「+50」） ----------
+  清();
+  A.刷新经验块();
+  A.餐后结算("早"); A.餐后结算("午"); A.餐后结算("晚");
+  for (var j = 0; j < 6; j++) A.餐后结算("喝水");
+  断("喝水 6 杯达标线但未到上限，按钮仍可点", !钮(1).disabled, "被禁用");
+  断("喝水计数 6/6 ✓", 行(1).querySelector(".任务数").textContent === "6/6 ✓",
+     行(1).querySelector(".任务数").textContent);
+  var r6 = A.餐后结算("运动");
+  断("最后一项完成触发达标", r6.是否刚达标 === true, r6.是否刚达标);
+  断("当天总经验 170（含达标 +50）", A.快照().存档.经验 === 170,
+     A.快照().存档.经验);
+  断("达标徽章点亮", 任务块().querySelector(".任务徽章").classList.contains("亮"), "未亮");
+  var 有达标提示 = false;
+  提示们().forEach(function (t) { if (/今天三项都做到了/.test(t.textContent)) 有达标提示 = true; });
+  断("弹出「今天三项都做到了」", 有达标提示, "未弹出");
+  var 有加50 = false;
+  提示们().forEach(function (t) { if (/达标奖励 \+50/.test(t.textContent)) 有加50 = true; });
+  断("提示里写着 +50 经验", 有加50, "未写出");
+
+  // ---------- 7. 换天重置：任务清零、等级还在（M3 验收） ----------
+  var 级前 = G.由经验算等级(A.快照().存档.经验).等级;
+  A.结算("喝水", { 今天: 日(25), 小时: 10 });   // 明天：新的一天
+  var 快7 = A.快照();
+  断("换天后每日清零重计", 快7.每日.日期 === 日(25) && 快7.每日.喝水 === 1 &&
+     快7.每日.三餐.length === 0 && 快7.每日.运动 === 0,
+     快7.每日.日期 + "/" + 快7.每日.喝水 + "/" + fastJoin(快7.每日.三餐) + "/" + 快7.每日.运动);
+  断("换天只加了这一次的经验", 快7.存档.经验 === 175, 快7.存档.经验);
+  断("等级还在没动", G.由经验算等级(快7.存档.经验).等级 === 级前,
+     G.由经验算等级(快7.存档.经验).等级 + " vs " + 级前);
+  // 展示归一：存储里是别的日期时，任务区按空画、且不落盘
+  A.结算("喝水", { 今天: 日(24), 小时: 10 });   // 又把每日写成 24 号
+  var s7 = A.任务状态();
+  断("存储日期≠今天时任务区按空显示", s7.喝水 === 0 && s7.三餐数 === 0, s7.喝水 + "/" + s7.三餐数);
+  断("按空显示不落盘（每日仍是 24 号）", A.快照().每日.日期 === 日(24),
+     A.快照().每日.日期);
+
+  // ---------- 8. 真实点击：按钮走 餐后结算 ----------
+  清();
+  A.刷新经验块();
+  钮(1).click();
+  断("点「+1 杯」后任务状态喝水=1", A.任务状态().喝水 === 1, A.任务状态().喝水);
+  断("点完计数变 1/6", 行(1).querySelector(".任务数").textContent === "1/6",
+     行(1).querySelector(".任务数").textContent);
+  断("点完存档 +5 经验 +1 金币", A.快照().存档.经验 === 5 && A.快照().存档.金币 === 1,
+     A.快照().存档.经验 + "/" + A.快照().存档.金币);
+
+  // ---------- 9. 手机任务板 ----------
+  取("养成胶囊").click();
+  var 板 = 取("养成任务板");
+  断("点胶囊弹出任务板", 板.classList.contains("开"), "未弹出");
+  断("任务板里也是三行卡", 板.querySelectorAll(".任务行").length === 3,
+     板.querySelectorAll(".任务行").length);
+  断("任务板有「去小窝」入口", 板.querySelector('a[href="养成.html"]') !== null, "无入口");
+  板.querySelector(".任务板关").click();
+  断("点「收起」关闭任务板", !板.classList.contains("开"), "未关闭");
+  取("养成胶囊").click();
+  断("再点胶囊重新弹出", 板.classList.contains("开"), "未弹出");
+  document.body.click();
+  断("点到板外自动收起", !板.classList.contains("开"), "未收起");
+  断("胶囊的可展开状态同步", 取("养成胶囊").getAttribute("aria-expanded") === "false",
+     取("养成胶囊").getAttribute("aria-expanded"));
+
+  // ---------- 10. 小窝页的手机组件容器（用户：今日任务放在小窝里，模拟手机的感觉） ----------
+  var 窝区 = document.createElement("div");
+  窝区.id = "小窝任务区";
+  窝区.className = "任务区 任务浅";
+  document.body.appendChild(窝区);
+  A.刷新任务区();
+  断("小窝页容器被同一份 画任务区 填充", 窝区.querySelectorAll(".任务行").length === 3,
+     窝区.querySelectorAll(".任务行").length);
+  断("小窝页容器里的喝水钮也能打卡", (function () {
+    清();
+    A.刷新任务区();
+    窝区.querySelector('[aria-label="喝水打卡"]').click();
+    return A.任务状态().喝水 === 1;
+  })(), A.任务状态().喝水);
+  // 小窝页（data-页面="小窝"）侧栏不再重复放任务块
+  任务块().parentNode.removeChild(任务块());
+  document.body.setAttribute("data-页面", "小窝");
+  A.注入();
+  断("小窝页侧栏不放任务块", !取("养成任务块"), "又注入了");
+  document.body.removeAttribute("data-页面");
+  A.注入();
+  断("非小窝页侧栏恢复任务块", !!取("养成任务块"), "没恢复");
+
+  function fastJoin(a) { return (a || []).join(","); }
+
+  // 清干净，别污染真实使用
+  清();
+
+  var 结论 = 失败.length === 0
+    ? '<span class="好">全部通过</span>：' + 通过 + " 项 / 0 失败"
+    : '<span class="坏">有失败</span>：' + 通过 + " 通过 / " + 失败.length + " 失败\n\n" + 失败.join("\n");
+  document.getElementById("结果").innerHTML =
+    结论 + "\n\n明细：\n" + 明细.join("\n");
+  window.验证结果 = { 通过: 通过, 失败: 失败 };
+  console.log("M3 任务区验证：", window.验证结果);
+}
+</script>
+</body>
+</html>

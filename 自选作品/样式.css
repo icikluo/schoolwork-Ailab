@@ -1013,6 +1013,103 @@ button {
   to { opacity: 0; transform: translateY(-6px); }
 }
 
+/* ---------- 养成系统 · 任务区（M3） ----------
+ * 同样由 养成反馈.js 动态注入。侧栏里是深绿玻璃底（跟经验块一套），
+ * 手机任务板是浅色浮层卡片——两套配色分开写，结构共用。
+ */
+.任务块 { margin-top: 8px; }
+.任务头 { display: flex; align-items: center; justify-content: space-between; }
+.任务头名 { font-size: 11px; letter-spacing: 2px; color: #C9DDB2; }
+.任务徽章 {
+  display: none;
+  font-size: 11px;
+  color: #8A6410;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #FFE9AE, #F7D774);
+}
+.任务徽章.亮 { display: inline-block; }
+.任务行 { display: flex; align-items: center; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+.任务图标 { font-size: 13px; flex: none; }
+.任务名 { font-size: 12px; color: #F0F5E5; flex: none; }
+.任务条 {
+  flex: 1; height: 4px; border-radius: 99px;
+  background: rgba(0, 0, 0, 0.30); overflow: hidden;
+  min-width: 0;
+}
+.任务条 i {
+  display: block; height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, #A8CE6B 0%, #F2C75C 100%);
+  transition: width 0.45s ease-out;
+}
+.任务数 {
+  flex: none; min-width: 30px; text-align: right;
+  font-size: 11px; color: #F0F5E5; font-variant-numeric: tabular-nums;
+}
+.任务钮 {
+  flex: none; font: inherit; font-size: 11px; line-height: 1;
+  padding: 5px 8px; border-radius: 99px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(168, 206, 107, 0.28); color: #EFF6E2;
+  white-space: nowrap;
+}
+.任务钮:hover:not(:disabled) { background: rgba(168, 206, 107, 0.45); }
+.任务钮:disabled { opacity: 0.38; cursor: default; }
+.任务行.满 .任务名, .任务行.满 .任务数, .任务行.满 .任务图标 { opacity: 0.55; }
+.餐点 { display: flex; gap: 2px; flex: none; }
+.餐点 i {
+  font-style: normal; font-size: 9px; line-height: 1;
+  padding: 3px 0; width: 13px; text-align: center; border-radius: 5px;
+  background: rgba(0, 0, 0, 0.25); color: #9FB884;
+}
+.餐点 i.完成 { background: rgba(168, 206, 107, 0.35); color: #F2FFE3; }
+.任务链接 {
+  flex: none; font-size: 11px; color: #D7E8BE;
+  text-decoration: underline dotted rgba(215, 232, 190, 0.6);
+  text-underline-offset: 3px;
+}
+.任务链接:hover { color: #F2FFE3; }
+
+/* 手机任务板：胶囊点开弹出，浅色卡片 */
+.任务板 {
+  display: none;
+  position: fixed;
+  left: 50%; bottom: 60px;
+  transform: translateX(-50%);
+  z-index: 62;
+  width: min(320px, calc(100vw - 28px));
+  padding: 14px 16px 12px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--绿-边);
+  box-shadow: 0 10px 32px rgba(39, 80, 10, 0.22);
+  animation: 浮入 0.24s ease-out;
+}
+.任务板.开 { display: block; }
+/* 浅色主题（手机任务板 & 小窝页手机组件共用）：加 .任务浅 这个类即可 */
+.任务浅 .任务头名 { color: var(--文字-淡); }
+.任务浅 .任务名, .任务浅 .任务数 { color: var(--绿-深); }
+.任务浅 .任务条 { background: var(--绿-浅); }
+.任务浅 .任务钮 {
+  border-color: var(--绿-边); background: var(--绿-浅); color: var(--绿-深);
+}
+.任务浅 .任务钮:hover:not(:disabled) { background: #DFEEC9; }
+.任务浅 .餐点 i { background: #F1EFE6; color: #A8A692; }
+.任务浅 .餐点 i.完成 { background: var(--绿-浅); color: var(--绿-深); }
+.任务浅 .任务链接 { color: var(--绿-主); }
+.任务板底 {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--边框);
+}
+.任务板底 a { font-size: 12px; color: var(--绿-主); text-decoration: none; }
+.任务板底 a:hover { text-decoration: underline; }
+.任务板关 {
+  font: inherit; font-size: 12px; cursor: pointer;
+  padding: 4px 10px; border-radius: 99px;
+  border: 1px solid var(--边框); background: transparent; color: var(--文字-淡);
+}
+.任务板关:hover { background: #F6F4EB; }
+
 @media (max-width: 900px) {
   .侧栏养成 { display: none; }
   .养成胶囊 { display: flex; }
@@ -1020,4 +1117,5 @@ button {
   .养成提示 { min-width: 0; }
   .主体 { padding-bottom: 68px; }
   .养成胶囊 { bottom: 12px; padding: 6px 14px; gap: 4px; }
+  .任务板 { bottom: 58px; }
 }

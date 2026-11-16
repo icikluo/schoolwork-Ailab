@@ -425,6 +425,32 @@ def 装配(js):
                         border: 1px solid var(--绿-边); background: var(--绿-浅); color: var(--绿-深); }
     .存档按钮 button:hover { background: #DFEEC9; }
     .存档回执 { font-size: 12px; color: var(--绿-主); margin: 8px 0 0; min-height: 17px; }
+
+    /* ---------- 今日任务 · 手机小部件（M3） ----------
+     * 用户点名要「模拟手机的感觉」：圆角机身 + 状态栏 + home 条，
+     * 内容由 养成反馈.js 的 画任务区 填进 #小窝任务区（浅色主题加 .任务浅）。 */
+    .手机框 {
+      position: relative;
+      max-width: 264px;
+      margin: 12px auto 4px;
+      padding: 12px 14px 8px;
+      border-radius: 26px;
+      background: linear-gradient(180deg, #FDFBF3 0%, #F5EFDF 100%);
+      border: 1px solid var(--边框);
+      box-shadow: 0 12px 30px rgba(39, 80, 10, 0.14), inset 0 0 0 5px #FFFFFF;
+    }
+    .手机状态栏 {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 10.5px; color: var(--文字-淡);
+      padding: 0 2px 7px; margin-bottom: 4px;
+      border-bottom: 1px solid rgba(39, 80, 10, 0.08);
+      font-variant-numeric: tabular-nums;
+    }
+    .手机home条 {
+      width: 64px; height: 4px; border-radius: 99px;
+      background: var(--边框-深); opacity: 0.45;
+      margin: 10px auto 4px;
+    }
     @media (max-width: 900px) {
       .小窝舞台 { height: 46vh; min-height: 300px; }
     }
@@ -485,6 +511,16 @@ def 装配(js):
       </section>
 
       <div class="小窝网格">
+        <section class="卡片">
+          <h2>今日任务</h2>
+          <p class="宠物注" style="margin-top:0">像手机上的小部件：喝水运动直接点，三餐去记录页记一餐就自动打卡。</p>
+          <div class="手机框">
+            <div class="手机状态栏"><span id="手机日期">—</span><span aria-hidden="true">📶 🔋</span></div>
+            <div class="任务区 任务浅" id="小窝任务区"></div>
+            <div class="手机home条" aria-hidden="true"></div>
+          </div>
+        </section>
+
         <section class="卡片">
           <h2>换装</h2>
           <p class="宠物注" style="margin-top:0">颜色实时生效，直接存进存档。款式要等低模服装包，先玩配色。</p>
@@ -762,6 +798,13 @@ def 装配(js):
     刷新顶栏();
     画换装();
     画宠物();
+    // 手机小部件的状态栏日期（今日任务内容由 养成反馈.js 填）
+    var 手机日期 = document.getElementById("手机日期");
+    if (手机日期) {
+      var d = new Date();
+      手机日期.textContent = ("0" + (d.getMonth() + 1)).slice(-2) + "/" +
+        ("0" + d.getDate()).slice(-2) + " 周" + "日一二三四五六"[d.getDay()];
+    }
     开始加载();
   })();
   </script>
