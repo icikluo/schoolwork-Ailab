@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>角色模型验证 · 真实 GLB 玩偶渲染</title>
+<style>
+  body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #F6F1E8; color: #3C4A2E; }
+  header { padding: 14px 22px 0; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .说明 { font-size: 12px; color: #8A9070; margin: 0 0 10px; }
+  #舞台 { position: relative; width: 720px; height: 720px; margin: 0 22px;
+         border: 1px solid #D8CFB8; border-radius: 14px; overflow: hidden;
+         background: radial-gradient(circle at 50% 38%, #FFFDF6 0%, #F1E7D4 70%, #E7DBC2 100%); }
+  canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  #自检 { margin: 10px 22px; padding: 10px 14px; font-size: 13px; line-height: 1.7;
+         background: #fff; border: 1px solid #D8CFB8; border-radius: 10px; white-space: pre-wrap; }
+  .失败 { color: #B3261E; }
+</style>
+</head>
+<body>
+<header>
+  <h1>角色模型验证：Tripo 玩偶（真实 GLB，自研解析 + WebGL1）</h1>
+  <p class="说明">剥离骨骼后的静态模型 · 贴图 1024² · 拖动旋转 / 滚轮缩放 · 验证目标：能不能不依赖 three.js 把真模型画出来</p>
+</header>
+<div id="舞台"><canvas id="画布"></canvas></div>
+<div id="自检">正在解析模型…</div>
+
+<script src="../数据/角色模型.js"></script>
+<script>
+"use strict";
+(function () {
+  var 自检 = document.getElementById("自检");
+  var 画布 = document.getElementById("画布");
+  var 结果行 = [];
+  function 记录(名, 值) { 结果行.push(名 + "：" + 值); 刷新(); }
+  function 刷新() { 自检.innerHTML = 结果行.join("\n"); }
+
+  // ---------- mat4 ----------
+  function 乘4(a, b) {
+    var o = new Float32Array(16);
+    for (var c = 0; c < 4; c++) for (var r = 0; r < 4; r++) {
+      var s = 0;
+      for (var k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k];
+      o[c * 4 + r] = s;
+    }
+    return o;
+  }
+  function 透视(fov, asp, n, f) {
+    var t = 1 / Math.tan(fov / 2);
+    return new Float32Array([t / asp, 0, 0, 0, 0, t, 0, 0,
+      0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]);
+  }
+  function 观察(眼, 心, 上) {
+    function 减(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+    function 叉(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+    function 规(v) { var l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+    function 点(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+    var z = 规(减(眼, 心)), x = 规(叉(上, z)), y = 叉(z, x);
+    return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+      -点(x, 眼), -点(y, 眼), -点(z, 眼), 1]);
+  }
+
+  // ---------- base64 → 字节 ----------
+  function 解b64(b64) {
+    var 步 = 0x8000, 块 = [];
+    for (var i = 0; i < b64.length; i += 步) 块.push(atob(b64.substr(i, 步)));
+    var s = 块.join(""), b = new Uint8Array(s.length);
+    for (var j = 0; j < s.length; j++) b[j] = s.charCodeAt(j);
+    return b;
+  }
+
+  // ---------- 最小 GLB 解析（支持 f32 VEC3/VEC2、u32/u16 索引、内嵌 JPEG/PNG） ----------
+  function 解析GLB(字节) {
+    var dv = new DataView(字节.buffer, 字节.byteOffset, 字节.byteLength);
+    if (dv.getUint32(0, true) !== 0x46546C67) throw new Error("不是 GLB");
+    var jlen = dv.getUint32(12, true);
+    var json文本 = "";
+    var jbytes = 字节.subarray(20, 20 + jlen);
+    if (window.TextDecoder) json文本 = new TextDecoder().decode(jbytes);
+    else { for (var i = 0; i < jbytes.length; i++) json文本 += String.fromCharCode(jbytes[i]); }
+    var gltf = JSON.parse(json文本);
+    var boff = 20 + jlen;
+    var blen = dv.getUint32(boff, true);
+    var bin = 字节.subarray(boff + 8, boff + 8 + blen);
+
+    function 访问器(序) {
+      var ac = gltf.accessors[序];
+      var bv = gltf.bufferViews[ac.bufferView];
+      var 起 = (bv.byteOffset || 0) + (ac.byteOffset || 0);
+      var 型 = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[ac.type];
+      if (ac.componentType === 5126) return new Float32Array(bin.buffer, bin.byteOffset + 起, ac.count * 型);
+      if (ac.componentType === 5125) return new Uint32Array(bin.buffer, bin.byteOffset + 起, ac.count);
+      if (ac.componentType === 5123) return new Uint16Array(bin.buffer, bin.byteOffset + 起, ac.count);
+      throw new Error("未支持的 componentType " + ac.componentType);
+    }
+    var pr = gltf.meshes[0].primitives[0];
+    var ibv = gltf.bufferViews[gltf.images[0].bufferView];
+    var 图起 = ibv.byteOffset || 0;
+    return {
+      gltf: gltf,
+      位置: 访问器(pr.attributes.POSITION),
+      法线: 访问器(pr.attributes.NORMAL),
+      uv: 访问器(pr.attributes.TEXCOORD_0),
+      索引: 访问器(pr.indices),
+      图字节: bin.subarray(图起, 图起 + ibv.byteLength),
+      图类型: gltf.images[0].mimeType
+    };
+  }
+
+  // ---------- 着色器（GLSL 仅 ASCII！） ----------
+  var 顶点源码 = [
+    "attribute vec3 aPosition;", "attribute vec3 aNormal;", "attribute vec2 aUV;",
+    "uniform mat4 uProj;", "uniform mat4 uView;",
+    "varying vec3 vNormal;", "varying vec2 vUV;",
+    "void main(){ vNormal = aNormal; vUV = aUV;",
+    " gl_Position = uProj * uView * vec4(aPosition, 1.0); }"
+  ].join("\n");
+  var 片元源码 = [
+    "precision mediump float;",
+    "uniform sampler2D uTex;",
+    "varying vec3 vNormal;", "varying vec2 vUV;",
+    "void main(){",
+    " vec3 base = texture2D(uTex, vUV).rgb;",
+    " vec3 n = normalize(vNormal);",
+    " float hemi = n.y * 0.5 + 0.5;",
+    " vec3 amb = mix(vec3(0.66, 0.62, 0.58), vec3(1.05, 1.02, 0.97), hemi);",
+    " vec3 key = normalize(vec3(0.5, 0.85, 0.6));",
+    " float diff = max(dot(n, key), 0.0);",
+    " float fill = max(dot(n, normalize(vec3(-0.6, 0.2, 0.5))), 0.0);",
+    " vec3 c = base * (amb * 0.62 + vec3(1.0, 0.95, 0.85) * diff * 0.46",
+    "               + vec3(0.9, 0.95, 1.0) * fill * 0.12);",
+    " gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }"
+  ].join("\n");
+
+  function 编译(gl, 型, 源) {
+    var sh = gl.createShader(型);
+    gl.shaderSource(sh, 源); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+      throw new Error("着色器编译失败：" + gl.getShaderInfoLog(sh));
+    return sh;
+  }
+
+  async function 启动() {
+    var t0 = performance.now();
+    if (!window.角色模型) throw new Error("未找到 window.角色模型（数据/角色模型.js 未加载）");
+    var 字节 = 解b64(角色模型.b64);
+    记录("模型字节", (字节.length / 1048576).toFixed(1) + " MB（base64 解码完成）");
+    var 模 = 解析GLB(字节);
+    记录("网格", "顶点 " + 模.位置.length / 3 + " / 三角形 " + 模.索引.length / 3);
+    记录("包围盒", JSON.stringify(角色模型.包围盒));
+
+    var gl = 画布.getContext("webgl2", { antialias: true, alpha: true });
+    var 是2 = !!gl;
+    if (!gl) gl = 画布.getContext("webgl", { antialias: true, alpha: true });
+    if (!gl) { 自检.innerHTML = '<span class="失败">WebGL 不可用 → 走 2.5D 降级方案</span>'; return; }
+    记录("上下文", 是2 ? "WebGL2（原生支持 u32 索引）" : "WebGL1");
+
+    // 关键：229k 顶点超过 u16 上限，索引必然是 u32。
+    // WebGL1 下不启用 OES_element_index_uint，drawElements(u32) 会静默失败——画面全空且不报错。
+    if (!是2 && !gl.getExtension("OES_element_index_uint"))
+      throw new Error("缺少 OES_element_index_uint，无法绘制 >65k 顶点的模型");
+    记录("u32 索引", 是2 ? "原生支持" : "OES_element_index_uint 已启用");
+
+    var 程序 = gl.createProgram();
+    gl.attachShader(程序, 编译(gl, gl.VERTEX_SHADER, 顶点源码));
+    gl.attachShader(程序, 编译(gl, gl.FRAGMENT_SHADER, 片元源码));
+    gl.linkProgram(程序);
+    if (!gl.getProgramParameter(程序, gl.LINK_STATUS))
+      throw new Error("链接失败：" + gl.getProgramInfoLog(程序));
+    gl.useProgram(程序);
+
+    var 交错 = new Float32Array(模.位置.length / 3 * 8);
+    for (var i = 0, n = 模.位置.length / 3; i < n; i++) {
+      交错[i * 8]     = 模.位置[i * 3];
+      交错[i * 8 + 1] = 模.位置[i * 3 + 1];
+      交错[i * 8 + 2] = 模.位置[i * 3 + 2];
+      交错[i * 8 + 3] = 模.法线[i * 3];
+      交错[i * 8 + 4] = 模.法线[i * 3 + 1];
+      交错[i * 8 + 5] = 模.法线[i * 3 + 2];
+      交错[i * 8 + 6] = 模.uv[i * 2];
+      交错[i * 8 + 7] = 模.uv[i * 2 + 1];
+    }
+    var vb = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+    gl.bufferData(gl.ARRAY_BUFFER, 交错, gl.STATIC_DRAW);
+    var ib = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 模.索引, gl.STATIC_DRAW);
+
+    var a位置 = gl.getAttribLocation(程序, "aPosition");
+    var a法线 = gl.getAttribLocation(程序, "aNormal");
+    var aUV = gl.getAttribLocation(程序, "aUV");
+    gl.enableVertexAttribArray(a位置);
+    gl.enableVertexAttribArray(a法线);
+    gl.enableVertexAttribArray(aUV);
+    gl.vertexAttribPointer(a位置, 3, gl.FLOAT, false, 32, 0);
+    gl.vertexAttribPointer(a法线, 3, gl.FLOAT, false, 32, 12);
+    gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, 32, 24);
+
+    // 贴图（glTF UV 原点在左上 → 不翻轉）
+    var 纹理 = gl.createTexture();
+    var 位图 = await createImageBitmap(new Blob([模.图字节], { type: 模.图类型 }));
+    gl.bindTexture(gl.TEXTURE_2D, 纹理);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, 位图);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    记录("贴图", 位图.width + "x" + 位图.height + " 已上传 GPU");
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+
+    var 索引类型 = (模.索引 instanceof Uint16Array) ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT;
+    var u投影 = gl.getUniformLocation(程序, "uProj");
+    var u观察 = gl.getUniformLocation(程序, "uView");
+
+    var 偏航 = 0.5, 俯仰 = 0.12, 距离 = 1.9, 目标 = [0, 0.52, 0];
+    function 画() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = 画布.clientWidth * dpr, h = 画布.clientHeight * dpr;
+      if (画布.width !== w || 画布.height !== h) { 画布.width = w; 画布.height = h; gl.viewport(0, 0, w, h); }
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      var cp = Math.cos(俯仰), sp = Math.sin(俯仰);
+      var 眼 = [目标[0] + 距离 * cp * Math.sin(偏航),
+                目标[1] + 距离 * sp,
+                目标[2] + 距离 * cp * Math.cos(偏航)];
+      gl.uniformMatrix4fv(u投影, false, 透视(38 * Math.PI / 180, w / h, 0.05, 30));
+      gl.uniformMatrix4fv(u观察, false, 观察(眼, 目标, [0, 1, 0]));
+      gl.drawElements(gl.TRIANGLES, 模.索引.length, 索引类型, 0);
+    }
+
+    // 拖动旋转 + 滚轮缩放
+    var 拖 = false, px = 0, py = 0;
+    画布.addEventListener("mousedown", function (e) { 拖 = true; px = e.clientX; py = e.clientY; });
+    window.addEventListener("mousemove", function (e) {
+      if (!拖) return;
+      偏航 += (e.clientX - px) * 0.008; 俯仰 -= (e.clientY - py) * 0.006;
+      俯仰 = Math.max(-0.5, Math.min(0.9, 俯仰));
+      px = e.clientX; py = e.clientY; 画();
+    });
+    window.addEventListener("mouseup", function () { 拖 = false; });
+    画布.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      距离 = Math.max(0.9, Math.min(4, 距离 * (e.deltaY > 0 ? 1.1 : 0.9))); 画();
+    }, { passive: false });
+
+    画();
+    记录("首帧渲染", "完成，总耗时 " + Math.round(performance.now() - t0) + " ms");
+    记录("自检结果", "通过 ✅");
+    // 空闲时缓慢自转，让用户感到它是活的
+    setInterval(function () { if (!拖) { 偏航 += 0.0035; 画(); } }, 33);
+  }
+
+  启动().catch(function (e) {
+    自检.innerHTML = '<span class="失败">失败：' + (e && e.message) + "</span>";
+  });
+})();
+</script>
+</body>
+</html>
