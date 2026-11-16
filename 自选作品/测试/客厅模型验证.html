@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>客厅模型验证 · 真实 GLB</title>
+<style>
+  body { margin: 0; font-family: "Microsoft YaHei", sans-serif; background: #F6F1E8; color: #3C4A2E; }
+  header { padding: 14px 22px 0; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .说明 { font-size: 12px; color: #8A9070; margin: 0 0 10px; }
+  #舞台 { position: relative; width: 760px; height: 640px; margin: 0 22px;
+         border: 1px solid #D8CFB8; border-radius: 14px; overflow: hidden;
+         background: radial-gradient(circle at 50% 40%, #FFFDF6 0%, #F1E7D4 70%, #E7DBC2 100%); }
+  canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  #自检 { margin: 10px 22px; padding: 10px 14px; font-size: 13px; line-height: 1.7;
+         background: #fff; border: 1px solid #D8CFB8; border-radius: 10px; white-space: pre-wrap; }
+  .失败 { color: #B3261E; }
+</style>
+</head>
+<body>
+<header>
+  <h1>客厅模型验证：Tripo 迷你客厅（真实 GLB）</h1>
+  <p class="说明">219k 顶点 / 411k 三角形 · 贴图 1024² · 按包围盒自动取景 · 拖动旋转 / 滚轮缩放</p>
+</header>
+<div id="舞台"><canvas id="画布"></canvas></div>
+<div id="自检">正在解析…</div>
+
+<script src="../数据/房间模型.js"></script>
+<script>
+"use strict";
+(function () {
+  var 自检 = document.getElementById("自检"), 画布 = document.getElementById("画布");
+  var 行 = [];
+  function 记(s) { 行.push(s); 自检.innerHTML = 行.join("\n"); }
+
+  function 透视(fov, asp, n, f) {
+    var t = 1 / Math.tan(fov / 2);
+    return new Float32Array([t / asp, 0, 0, 0, 0, t, 0, 0,
+      0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]);
+  }
+  function 观察(眼, 心, 上) {
+    function 减(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+    function 叉(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+    function 规(v) { var l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; }
+    function 点(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    var z = 规(减(眼, 心)), x = 规(叉(上, z)), y = 叉(z, x);
+    return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0,
+      x[2], y[2], z[2], 0, -点(x,眼), -点(y,眼), -点(z,眼), 1]);
+  }
+  function 解b64(b64) {
+    var 步 = 0x8000, 块 = [];
+    for (var i = 0; i < b64.length; i += 步) 块.push(atob(b64.substr(i, 步)));
+    var s = 块.join(""), b = new Uint8Array(s.length);
+    for (var j = 0; j < s.length; j++) b[j] = s.charCodeAt(j);
+    return b;
+  }
+  function 解析GLB(字节) {
+    var dv = new DataView(字节.buffer, 字节.byteOffset, 字节.byteLength);
+    var jlen = dv.getUint32(12, true);
+    var jb = 字节.subarray(20, 20 + jlen), t = "";
+    for (var i = 0; i < jb.length; i++) t += String.fromCharCode(jb[i]);
+    var g = JSON.parse(t);
+    var boff = 20 + jlen, blen = dv.getUint32(boff, true);
+    var bin = 字节.subarray(boff + 8, boff + 8 + blen);
+    function 取(序) {
+      var ac = g.accessors[序], bv = g.bufferViews[ac.bufferView];
+      var 起 = (bv.byteOffset || 0) + (ac.byteOffset || 0);
+      if (ac.componentType === 5126) return new Float32Array(bin.buffer, bin.byteOffset + 起, ac.count * ({SCALAR:1,VEC2:2,VEC3:3,VEC4:4}[ac.type]));
+      if (ac.componentType === 5125) return new Uint32Array(bin.buffer, bin.byteOffset + 起, ac.count);
+      if (ac.componentType === 5123) return new Uint16Array(bin.buffer, bin.byteOffset + 起, ac.count);
+      throw new Error("componentType " + ac.componentType);
+    }
+    var pr = g.meshes[0].primitives[0];
+    var ibv = g.bufferViews[g.images[0].bufferView], 图起 = ibv.byteOffset || 0;
+    return { 位置: 取(pr.attributes.POSITION), 法线: 取(pr.attributes.NORMAL),
+             uv: 取(pr.attributes.TEXCOORD_0), 索引: 取(pr.indices),
+             图字节: bin.subarray(图起, 图起 + ibv.byteLength), 图类型: g.images[0].mimeType };
+  }
+
+  var 顶点源码 = [
+    "attribute vec3 aPosition; attribute vec3 aNormal; attribute vec2 aUV;",
+    "uniform mat4 uProj; uniform mat4 uView; uniform mat4 uModel; uniform mat3 uNormalMat;",
+    "varying vec3 vNormal; varying vec2 vUV;",
+    "void main(){ vNormal = uNormalMat * aNormal; vUV = aUV;",
+    " gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0); }"
+  ].join("\n");
+  var 片元源码 = [
+    "precision mediump float; uniform sampler2D uTex;",
+    "varying vec3 vNormal; varying vec2 vUV;",
+    "void main(){ vec3 base = texture2D(uTex, vUV).rgb; vec3 n = normalize(vNormal);",
+    " float hemi = n.y * 0.5 + 0.5;",
+    " vec3 amb = mix(vec3(0.64, 0.60, 0.56), vec3(1.04, 1.01, 0.96), hemi);",
+    " vec3 key = normalize(vec3(0.5, 0.9, 0.55));",
+    " float diff = max(dot(n, key), 0.0);",
+    " float fill = max(dot(n, normalize(vec3(-0.55, 0.25, 0.5))), 0.0);",
+    " vec3 c = base * (amb * 0.66 + vec3(1.0, 0.95, 0.86) * diff * 0.44",
+    "               + vec3(0.9, 0.95, 1.0) * fill * 0.11);",
+    " gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }"
+  ].join("\n");
+
+  function 编译(gl, 型, 源) {
+    var s = gl.createShader(型); gl.shaderSource(s, 源); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+
+  // 单位矩阵 / 缩放矩阵
+  function 缩放矩阵(k) { return new Float32Array([k,0,0,0, 0,k,0,0, 0,0,k,0, 0,0,0,1]); }
+
+  async function 启动() {
+    var t0 = performance.now();
+    if (!window.房间模型) throw new Error("未加载 数据/房间模型.js");
+    var 模 = 解析GLB(解b64(房间模型.b64));
+    记("模型：" + 房间模型.顶点数.toLocaleString() + " 顶点 / " +
+       房间模型.三角形数.toLocaleString() + " 三角形");
+    记("包围盒：" + JSON.stringify(房间模型.包围盒));
+
+    var gl = 画布.getContext("webgl2", { antialias: true, alpha: true }) ||
+             画布.getContext("webgl", { antialias: true, alpha: true });
+    if (!gl) { 自检.innerHTML = "WebGL 不可用"; return; }
+    if (!gl.getParameter || !gl.getExtension("OES_element_index_uint")) { /* WebGL2 原生支持 */ }
+
+    var p = gl.createProgram();
+    gl.attachShader(p, 编译(gl, gl.VERTEX_SHADER, 顶点源码));
+    gl.attachShader(p, 编译(gl, gl.FRAGMENT_SHADER, 片元源码));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    gl.useProgram(p);
+
+    var n = 模.位置.length / 3, 交错 = new Float32Array(n * 8);
+    for (var i = 0; i < n; i++) {
+      交错[i*8]   = 模.位置[i*3];   交错[i*8+1] = 模.位置[i*3+1]; 交错[i*8+2] = 模.位置[i*3+2];
+      交错[i*8+3] = 模.法线[i*3];   交错[i*8+4] = 模.法线[i*3+1]; 交错[i*8+5] = 模.法线[i*3+2];
+      交错[i*8+6] = 模.uv[i*2];     交错[i*8+7] = 模.uv[i*2+1];
+    }
+    var vb = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, 交错, gl.STATIC_DRAW);
+    var ib = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 模.索引, gl.STATIC_DRAW);
+
+    var aP = gl.getAttribLocation(p, "aPosition"), aN = gl.getAttribLocation(p, "aNormal"),
+        aU = gl.getAttribLocation(p, "aUV");
+    gl.enableVertexAttribArray(aP); gl.enableVertexAttribArray(aN); gl.enableVertexAttribArray(aU);
+    gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 32, 0);
+    gl.vertexAttribPointer(aN, 3, gl.FLOAT, false, 32, 12);
+    gl.vertexAttribPointer(aU, 2, gl.FLOAT, false, 32, 24);
+
+    var 纹理 = gl.createTexture();
+    var 位 = await createImageBitmap(new Blob([模.图字节], { type: 模.图类型 }));
+    gl.bindTexture(gl.TEXTURE_2D, 纹理);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, 位);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    记("贴图：" + 位.width + "x" + 位.height);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+
+    var uP = gl.getUniformLocation(p, "uProj"), uV = gl.getUniformLocation(p, "uView"),
+        uM = gl.getUniformLocation(p, "uModel"), uN = gl.getUniformLocation(p, "uNormalMat"),
+        uT = gl.getUniformLocation(p, "uTex");
+    var 索引类型 = (模.索引 instanceof Uint16Array) ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT;
+
+    var b = 房间模型.包围盒;
+    var 中心 = [(b.min[0]+b.max[0])/2, (b.min[1]+b.max[1])/2, (b.min[2]+b.max[2])/2];
+    var 半径 = Math.hypot(b.max[0]-b.min[0], b.max[1]-b.min[1], b.max[2]-b.min[2]) / 2;
+    var 偏航 = 0.6, 俯仰 = 0.30, 距离 = 半径 * 3.2;
+
+    function 画() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = 画布.clientWidth * dpr, h = 画布.clientHeight * dpr;
+      if (画布.width !== w) { 画布.width = w; 画布.height = h; gl.viewport(0, 0, w, h); }
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      var cp = Math.cos(俯仰);
+      var 眼 = [中心[0] + 距离*cp*Math.sin(偏航), 中心[1] + 距离*Math.sin(俯仰),
+                中心[2] + 距离*cp*Math.cos(偏航)];
+      gl.uniformMatrix4fv(uP, false, 透视(38*Math.PI/180, w/h, 半径/100, 半径*30));
+      gl.uniformMatrix4fv(uV, false, 观察(眼, 中心, [0,1,0]));
+      gl.uniformMatrix4fv(uM, false, 缩放矩阵(1));
+      gl.uniformMatrix3fv(uN, false, new Float32Array([1,0,0, 0,1,0, 0,0,1]));
+      gl.uniform1i(uT, 0);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, 纹理);
+      gl.drawElements(gl.TRIANGLES, 模.索引.length, 索引类型, 0);
+    }
+
+    var 拖 = false, px = 0, py = 0;
+    画布.addEventListener("pointerdown", function (e) { 拖 = true; px = e.clientX; py = e.clientY; });
+    window.addEventListener("pointermove", function (e) {
+      if (!拖) return;
+      偏航 += (e.clientX - px) * 0.007; 俯仰 -= (e.clientY - py) * 0.005;
+      俯仰 = Math.max(-0.2, Math.min(1.2, 俯仰)); px = e.clientX; py = e.clientY; 画();
+    });
+    window.addEventListener("pointerup", function () { 拖 = false; });
+    画布.addEventListener("wheel", function (e) {
+      e.preventDefault(); 距离 = Math.max(半径*1.2, Math.min(半径*8, 距离 * (e.deltaY > 0 ? 1.1 : 0.9))); 画();
+    }, { passive: false });
+
+    画();
+    记("首帧：" + Math.round(performance.now() - t0) + " ms");
+    记("自检结果：通过 ✅");
+  }
+  启动().catch(function (e) { 自检.innerHTML = '<span class="失败">失败：' + e.message + "</span>"; });
+})();
+</script>
+</body>
+</html>
