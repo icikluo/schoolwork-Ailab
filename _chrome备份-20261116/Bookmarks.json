@@ -1,0 +1,146 @@
+{
+   "checksum": "65e980ead75fe6766796917f8639c270",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13270582684842755",
+            "date_last_used": "0",
+            "guid": "95d5a262-b74d-4a63-b89c-7685b95a5664",
+            "id": "5",
+            "name": "Gmail",
+            "type": "url",
+            "url": "https://accounts.google.com/b/0/AddMailService"
+         }, {
+            "date_added": "13270582684843412",
+            "date_last_used": "0",
+            "guid": "bbc675ca-1b98-4eb1-89e4-40c7b8e48b0e",
+            "id": "6",
+            "name": "YouTube",
+            "type": "url",
+            "url": "https://youtube.com/"
+         }, {
+            "date_added": "13270582684843723",
+            "date_last_used": "0",
+            "guid": "f68b4b1d-00ac-4c91-84b6-27edf3fe839c",
+            "id": "7",
+            "name": "地图",
+            "type": "url",
+            "url": "https://maps.google.com/"
+         }, {
+            "date_added": "13270582689499296",
+            "date_last_used": "0",
+            "guid": "5f110042-2f05-44ed-a706-c7dd6c8a5440",
+            "id": "8",
+            "name": "翻译",
+            "type": "url",
+            "url": "https://translate.google.com/"
+         }, {
+            "date_added": "13270582754189169",
+            "date_last_used": "0",
+            "guid": "e38a2800-48ef-4e4c-b903-d1540ebc7e2a",
+            "id": "10",
+            "name": "Gmail",
+            "type": "url",
+            "url": "https://accounts.google.com/b/0/AddMailService"
+         }, {
+            "date_added": "13270582754189523",
+            "date_last_used": "0",
+            "guid": "150a5c26-b024-4c2a-8c2f-0a93e7344b08",
+            "id": "11",
+            "name": "YouTube",
+            "type": "url",
+            "url": "https://youtube.com/"
+         }, {
+            "date_added": "13270582754189661",
+            "date_last_used": "0",
+            "guid": "8c7d0609-dbbd-4b83-8f1c-441564b391dd",
+            "id": "12",
+            "name": "地图",
+            "type": "url",
+            "url": "https://maps.google.com/"
+         }, {
+            "date_added": "13270582824316717",
+            "date_last_used": "0",
+            "guid": "0036da92-d0cc-4238-aba6-ab001b32bf24",
+            "id": "14",
+            "name": "Gmail",
+            "type": "url",
+            "url": "https://accounts.google.com/b/0/AddMailService"
+         }, {
+            "date_added": "13270582824317080",
+            "date_last_used": "0",
+            "guid": "0b0b33a8-dd57-4927-bb92-a9fc9349d955",
+            "id": "15",
+            "name": "YouTube",
+            "type": "url",
+            "url": "https://youtube.com/"
+         }, {
+            "date_added": "13270582824317233",
+            "date_last_used": "0",
+            "guid": "be968d5d-6e90-4f1f-be05-5a12766f30b4",
+            "id": "16",
+            "name": "地图",
+            "type": "url",
+            "url": "https://maps.google.com/"
+         }, {
+            "date_added": "13270582826096018",
+            "date_last_used": "0",
+            "guid": "15080bd1-8f9b-465d-be2c-9a994678673f",
+            "id": "17",
+            "name": "翻译",
+            "type": "url",
+            "url": "https://translate.google.com/"
+         }, {
+            "date_added": "13437039212313900",
+            "date_last_used": "13437039248447785",
+            "guid": "db7e91cd-9912-4c2b-a253-37895294b66c",
+            "id": "19",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "Microsoft Store - Generation Project (v1.2.3) [by @rgadguard]",
+            "type": "url",
+            "url": "https://store.rg-adguard.net/"
+         }, {
+            "date_added": "13437196154134719",
+            "date_last_used": "0",
+            "guid": "d110952a-8c29-42d0-bf99-1ea65c6fac4b",
+            "id": "21",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "线性回归  |  Machine Learning  |  Google for Developers",
+            "type": "url",
+            "url": "https://developers.google.cn/machine-learning/crash-course/linear-regression?hl=zh-cn"
+         } ],
+         "date_added": "13270582680902891",
+         "date_last_used": "0",
+         "date_modified": "13437196154134719",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "书签栏",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13270582680902894",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "其他书签",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13270582680902895",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "移动设备书签",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}
