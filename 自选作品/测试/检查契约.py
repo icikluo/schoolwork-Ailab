@@ -20,6 +20,7 @@ from pathlib import Path
     "计划": "计划.html",
     "记录": "记录.html",
     "训练": "训练.html",
+    "小窝": "养成.html",
 }
 
 页面文本 = {}
@@ -68,8 +69,27 @@ if 结构问题:
     for 条 in 结构问题:
         print("  - " + 条)
     sys.exit(1)
+# 养成页不参与上面的「共用脚本」契约（它自带渲染器，不用 脚本.js），
+# 但它必须是可达的：data-页面 对得上、且和其他页共用同一套导航。
+养成 = 根 / "养成.html"
+if not 养成.exists():
+    print("【失败】缺少页面文件：养成.html")
+    sys.exit(1)
+养成文本 = 养成.read_text(encoding="utf-8")
+养成问题 = []
+if 'data-页面="小窝"' not in 养成文本:
+    养成问题.append("养成.html：body 的 data-页面 不是「小窝」")
+for 键, 文件 in 导航文件.items():
+    if f'href="{文件}" data-页="{键}"' not in 养成文本:
+        养成问题.append(f"养成.html：侧栏缺少指向 {文件}（{键}）的导航项")
+if 养成问题:
+    print("【失败】养成页结构契约不一致：")
+    for 条 in 养成问题:
+        print("  - " + 条)
+    sys.exit(1)
+
 print("【通过】所有 取元素() 引用都能在页面中找到对应元素")
-print("【通过】6 个页面的 data-页面 / 侧栏导航 / 目标值 id 全部一致")
+print("【通过】6 个页面 + 养成页的 data-页面 / 侧栏导航 / 目标值 id 全部一致")
 
 # 反向检查：页面上的 id 是否都被用到（允许有未用到的，仅提示）
 未用 = sorted(页面ids - set(被引用))

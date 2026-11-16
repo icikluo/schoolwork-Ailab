@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的小窝 · 食谱搭配</title>
+  <link rel="stylesheet" href="样式.css">
+  <style>
+    /* ---------- 我的小窝（M2） ---------- */
+    .小窝卡片 { padding: 0; overflow: hidden; }
+    .小窝舞台 {
+      position: relative;
+      height: clamp(400px, 64vh, 660px);
+      background: radial-gradient(circle at 50% 26%, #FFFDF6 0%, #F2E8D5 62%, #E7DBC2 100%);
+    }
+    .小窝舞台 canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+    .小窝遮罩 {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      background: rgba(252, 249, 240, 0.94); transition: opacity .35s ease-out;
+    }
+    .小窝遮罩[data-隐="1"] { opacity: 0; pointer-events: none; }
+    .小窝遮罩 p { margin: 0; font-size: 13px; color: var(--文字-淡); }
+    .小窝进度 { width: 168px; height: 5px; border-radius: 99px; background: var(--绿-浅); overflow: hidden; }
+    .小窝进度 i { display: block; height: 100%; width: 12%; border-radius: 99px;
+                  background: linear-gradient(90deg, var(--绿-中), #F2C75C); transition: width .4s ease-out; }
+    .小窝小字 { font-size: 11.5px; color: var(--文字-淡); opacity: .82; }
+    .小窝失败 { max-width: 320px; text-align: center; line-height: 1.75; font-size: 13px; color: var(--文字-淡); }
+    .小窝操作 { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+    .小窝操作 .文字按钮 { background: rgba(255,255,255,.92); border: 1px solid var(--边框); padding: 5px 11px; font-size: 12px; }
+
+    .小窝网格 { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 16px; margin-top: 16px; }
+    .换装行 { display: flex; align-items: center; gap: 9px; margin-top: 11px; flex-wrap: wrap; }
+    .换装行:first-child { margin-top: 4px; }
+    .换装名 { width: 44px; font-size: 13px; color: var(--文字-淡); flex: none; }
+    .色点 {
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer; padding: 0;
+      border: 1px solid var(--边框-深); position: relative; flex: none;
+    }
+    .色点[data-选="1"] { box-shadow: 0 0 0 2px var(--卡白), 0 0 0 3.5px var(--绿-中); }
+    .色点.原色::after {
+      content: "原"; position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 11px; color: var(--文字-淡); background: repeating-linear-gradient(45deg, #fff 0 3px, #EDE9DC 3px 6px);
+      border-radius: 50%;
+    }
+    .宠物空 { font-size: 13px; color: var(--文字-淡); line-height: 1.75; margin: 0; }
+    .领养组 { display: flex; gap: 8px; margin-top: 12px; }
+    .领养组 button { flex: 1; padding: 9px 0; border-radius: var(--圆角-小); cursor: pointer;
+                     border: 1px solid var(--绿-边); background: var(--绿-浅); color: var(--绿-深); font: inherit; font-size: 13px; }
+    .领养组 button:hover { background: #DFEEC9; }
+    .宠物头 { display: flex; align-items: center; gap: 8px; }
+    .宠物头像 { font-size: 30px; line-height: 1; }
+    .宠物名 { font: inherit; font-size: 15px; font-weight: 600; color: var(--绿-深);
+              border: 1px solid transparent; border-radius: 6px; padding: 2px 5px; width: 108px; background: transparent; }
+    .宠物名:hover, .宠物名:focus { border-color: var(--边框-深); background: var(--卡白); outline: none; }
+    .宠物注 { font-size: 12px; color: var(--文字-淡); margin: 9px 0 0; line-height: 1.7; }
+    .存档区 textarea {
+      width: 100%; height: 78px; margin-top: 10px; padding: 8px 10px; resize: vertical;
+      font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.5;
+      border: 1px solid var(--边框); border-radius: var(--圆角-小); color: var(--文字-淡); background: #FCFBF6;
+    }
+    .存档按钮 { display: flex; gap: 8px; margin-top: 8px; }
+    .存档按钮 button { padding: 7px 14px; border-radius: var(--圆角-小); cursor: pointer; font: inherit; font-size: 12.5px;
+                        border: 1px solid var(--绿-边); background: var(--绿-浅); color: var(--绿-深); }
+    .存档按钮 button:hover { background: #DFEEC9; }
+    .存档回执 { font-size: 12px; color: var(--绿-主); margin: 8px 0 0; min-height: 17px; }
+    @media (max-width: 900px) {
+      .小窝舞台 { height: 46vh; min-height: 300px; }
+    }
+  </style>
+</head>
+<body data-页面="小窝">
+  <aside class="侧栏">
+    <div class="侧栏品牌">
+      <a class="品牌名" href="index.html">食谱搭配</a>
+      <span class="品牌副">吃练一体 · 纯离线</span>
+    </div>
+    <div class="侧栏目标">
+      <span class="侧栏目标标签">每日目标</span>
+      <div class="侧栏目标值"><b id="侧栏目标">—</b><small> kcal</small></div>
+      <div class="侧栏今日" id="侧栏今日">今日 0 道 · 0 kcal</div>
+    </div>
+    <nav class="侧栏导航" aria-label="主导航">
+      <p class="导航组名">饮食管理</p>
+      <a class="导航项" href="index.html" data-页="总览"><span class="导航图标">🥗</span>今日总览</a>
+      <a class="导航项" href="目标.html" data-页="目标"><span class="导航图标">🎯</span>我的目标</a>
+      <a class="导航项" href="食谱.html" data-页="食谱"><span class="导航图标">📖</span>食谱专区</a>
+      <a class="导航项" href="计划.html" data-页="计划"><span class="导航图标">🗓</span>一周计划</a>
+      <a class="导航项" href="记录.html" data-页="记录"><span class="导航图标">🕘</span>记录与回看</a>
+      <p class="导航组名">训练</p>
+      <a class="导航项" href="训练.html" data-页="训练"><span class="导航图标">💪</span>动作库</a>
+      <p class="导航组名">养成</p>
+      <a class="导航项 选中" href="养成.html" data-页="小窝" aria-current="page"><span class="导航图标">🏠</span>我的小窝</a>
+    </nav>
+    <div class="侧栏底注">记录与目标存在本机浏览器<br>换页、刷新都不会丢</div>
+  </aside>
+  <div class="主体">
+    <header class="页面顶栏">
+      <div class="页面标题组">
+        <h1>我的小窝</h1>
+        <p>每天好好吃饭喝水运动，小窝就一点点变好</p>
+      </div>
+      <div class="顶栏目标" id="顶栏等级">Lv.<b>—</b> <small id="顶栏金币">0 币</small></div>
+    </header>
+
+    <main class="容器">
+      <section class="卡片 小窝卡片">
+        <div class="小窝舞台" id="舞台">
+          <canvas id="画布"></canvas>
+          <div class="小窝遮罩" id="遮罩">
+            <div class="小窝进度"><i id="进度条"></i></div>
+            <p id="遮罩文字">正在搭你的小窝…</p>
+            <p class="小窝小字" id="遮罩小字">第一次打开要读两个模型，稍等一下</p>
+          </div>
+          <div class="小窝操作">
+            <button type="button" class="文字按钮" id="挥手按钮">挥个手</button>
+            <button type="button" class="文字按钮" id="复位按钮">复位视角</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="小窝网格">
+        <section class="卡片">
+          <h2>换装</h2>
+          <p class="宠物注" style="margin-top:0">颜色实时生效，直接存进存档。款式要等低模服装包，先玩配色。</p>
+          <div id="换装区"></div>
+          <p class="宠物注" id="换装提示">当前：全部保持原色</p>
+        </section>
+
+        <section class="卡片">
+          <h2>宠物</h2>
+          <div id="宠物区"></div>
+        </section>
+
+        <section class="卡片">
+          <h2>存档</h2>
+          <p class="宠物注" style="margin-top:0">存档只在这台电脑的浏览器里。换电脑或清缓存前，先导出备份。</p>
+          <div class="存档区">
+            <textarea id="存档文本" spellcheck="false" placeholder="点「导出」把存档变成一段文本，复制走存好"></textarea>
+            <div class="存档按钮">
+              <button type="button" id="导出按钮">导出</button>
+              <button type="button" id="导入按钮">导入</button>
+            </div>
+            <p class="存档回执" id="存档回执"></p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="养成.js"></script>
+  <script src="养成反馈.js"></script>
+  <script>
+"use strict";
+(function () {
+  var 画布 = document.getElementById("画布");
+  // 渲染器内部的过程信息只进控制台：生产页面上不该出现「骨骼定位」这类字眼
+  function 记(s) { if (window.console && console.debug) console.debug("[小窝]", s); }
+
+  // ---------------- 矩阵 ----------------
+  function 乘(a, b) {
+    var o = new Float32Array(16);
+    for (var c = 0; c < 4; c++) for (var r = 0; r < 4; r++) {
+      o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+    }
+    return o;
+  }
+  function 单位() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+  function 平移(x, y, z) { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]); }
+  function 缩放(x, y, z) { return new Float32Array([x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1]); }
+  function 绕Y(a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]);
+  }
+  function 绕X(a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]);
+  }
+  function 绕Z(a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]);
+  }
+  // 4x4 求逆（余子式展开，列主序）
+  function 逆(m) {
+    var a00=m[0],a01=m[1],a02=m[2],a03=m[3],
+        a10=m[4],a11=m[5],a12=m[6],a13=m[7],
+        a20=m[8],a21=m[9],a22=m[10],a23=m[11],
+        a30=m[12],a31=m[13],a32=m[14],a33=m[15];
+    var b00=a00*a11-a01*a10, b01=a00*a12-a02*a10, b02=a00*a13-a03*a10,
+        b03=a01*a12-a02*a11, b04=a01*a13-a03*a11, b05=a02*a13-a03*a12,
+        b06=a20*a31-a21*a30, b07=a20*a32-a22*a30, b08=a20*a33-a23*a30,
+        b09=a21*a32-a22*a31, b10=a21*a33-a23*a31, b11=a22*a33-a23*a32;
+    var 行 = b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;
+    if (!行) return 单位();
+    var i = 1 / 行;
+    return new Float32Array([
+      (a11*b11-a12*b10+a13*b09)*i, (a02*b10-a01*b11-a03*b09)*i,
+      (a31*b05-a32*b04+a33*b03)*i, (a22*b04-a21*b05-a23*b03)*i,
+      (a12*b08-a10*b11-a13*b07)*i, (a00*b11-a02*b08+a03*b07)*i,
+      (a32*b02-a30*b05-a33*b01)*i, (a20*b05-a22*b02+a23*b01)*i,
+      (a10*b10-a11*b08+a13*b06)*i, (a01*b08-a00*b10-a03*b06)*i,
+      (a30*b04-a31*b02+a33*b00)*i, (a21*b02-a20*b04-a23*b00)*i,
+      (a11*b07-a10*b09-a12*b06)*i, (a00*b09-a01*b07+a02*b06)*i,
+      (a31*b01-a30*b03-a32*b00)*i, (a20*b03-a21*b01+a22*b00)*i
+    ]);
+  }
+
+  function 透视(fov, asp, n, f) {
+    var t = 1 / Math.tan(fov / 2);
+    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f+n)/(n-f),-1, 0,0,2*f*n/(n-f),0]);
+  }
+  function 观察(眼, 心, 上) {
+    function 减(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+    function 叉(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+    function 规(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+    function 点(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+    var z = 规(减(眼,心)), x = 规(叉(上,z)), y = 叉(z,x);
+    return new Float32Array([x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
+      -点(x,眼),-点(y,眼),-点(z,眼),1]);
+  }
+  // 法线矩阵：R·S⁻¹（非等比缩放必需）
+  function 法线阵(x, y, z, ry) {
+    var c = Math.cos(ry || 0), s = Math.sin(ry || 0);
+    // 列主序 3x3：col0=(c/x,0,-s/x) col1=(0,1/y,0) col2=(s/z,0,c/z)
+    return new Float32Array([c/x, 0, -s/x, 0, 1/y, 0, s/z, 0, c/z]);
+  }
+  function 法线阵3(a) { return new Float32Array([1,0,0, 0,1,0, 0,0,1]); }
+
+  // ---------------- base64 / GLB ----------------
+  function 解b64(b64) {
+    var 步 = 0x8000, 块 = [];
+    for (var i = 0; i < b64.length; i += 步) 块.push(atob(b64.substr(i, 步)));
+    var s = 块.join(""), b = new Uint8Array(s.length);
+    for (var j = 0; j < s.length; j++) b[j] = s.charCodeAt(j);
+    return b;
+  }
+  function 解析GLB(字节) {
+    var dv = new DataView(字节.buffer, 字节.byteOffset, 字节.byteLength);
+    if (dv.getUint32(0, true) !== 0x46546C67) throw new Error("不是 GLB");
+    var jlen = dv.getUint32(12, true);
+    var jb = 字节.subarray(20, 20 + jlen), t = "";
+    for (var i = 0; i < jb.length; i++) t += String.fromCharCode(jb[i]);
+    var g = JSON.parse(t);
+    var boff = 20 + jlen, blen = dv.getUint32(boff, true);
+    var bin = 字节.subarray(boff + 8, boff + 8 + blen);
+    function 取(序) {
+      var ac = g.accessors[序], bv = g.bufferViews[ac.bufferView];
+      var 起 = (bv.byteOffset || 0) + (ac.byteOffset || 0);
+      var 型 = {SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16}[ac.type];
+      if (ac.componentType === 5126) return new Float32Array(bin.buffer, bin.byteOffset + 起, ac.count * 型);
+      // 注意：u32 / u16 分支同样要乘分量数——JOINTS_0 是 VEC4，漏乘会让关节索引整体错位
+      if (ac.componentType === 5125) return new Uint32Array(bin.buffer, bin.byteOffset + 起, ac.count * 型);
+      if (ac.componentType === 5123) return new Uint16Array(bin.buffer, bin.byteOffset + 起, ac.count * 型);
+      if (ac.componentType === 5121) return new Uint8Array(bin.buffer, bin.byteOffset + 起, ac.count * 型);
+      throw new Error("componentType " + ac.componentType);
+    }
+    var pr = g.meshes[0].primitives[0];
+    var ibv = g.bufferViews[g.images[0].bufferView], 图起 = ibv.byteOffset || 0;
+    var 结 = { gltf: g, 位置: 取(pr.attributes.POSITION), 法线: 取(pr.attributes.NORMAL),
+               uv: 取(pr.attributes.TEXCOORD_0), 索引: 取(pr.indices),
+               图字节: bin.subarray(图起, 图起 + ibv.byteLength), 图类型: g.images[0].mimeType };
+    if (pr.attributes.JOINTS_0 !== undefined) {
+      结.关节 = 取(pr.attributes.JOINTS_0);
+      结.权重 = 取(pr.attributes.WEIGHTS_0);
+      var ig = g.skins[0];
+      结.骨关节 = ig.joints;
+      结.绑定逆 = ig.inverseBindMatrices !== undefined ? 取(ig.inverseBindMatrices) : null;
+    }
+    return 结;
+  }
+
+  // ---------------- 着色器（WebGL2 / GLSL 300 es） ----------------
+  var 头 = "#version 300 es\nprecision highp float;\n";
+  function 编(gl, 型, 源) {
+    var s = gl.createShader(型); gl.shaderSource(s, 源); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function 建程序(gl, 顶点, 片元) {
+    var p = gl.createProgram();
+    gl.attachShader(p, 编(gl, gl.VERTEX_SHADER, 顶点));
+    gl.attachShader(p, 编(gl, gl.FRAGMENT_SHADER, 片元));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    return p;
+  }
+
+  // 纯色（房间壳）
+  var 纯色顶点 = 头 + [
+    "in vec3 aPosition; in vec3 aNormal; in vec3 aColor;",
+    "uniform mat4 uProj, uView, uModel; uniform mat3 uNormalMat;",
+    "out vec3 vN; out vec3 vC;",
+    "void main(){ vN = uNormalMat * aNormal; vC = aColor;",
+    " gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0); }"
+  ].join("\n");
+  var 纯色片元 = 头 + [
+    "in vec3 vN; in vec3 vC;",
+    "out vec4 o;",
+    "void main(){ vec3 n = normalize(vN);",
+    " float hemi = n.y * 0.5 + 0.5;",
+    " vec3 amb = mix(vec3(0.62,0.58,0.54), vec3(1.03,1.00,0.95), hemi);",
+    " float diff = max(dot(n, normalize(vec3(0.5,0.9,0.55))), 0.0);",
+    " float fill = max(dot(n, normalize(vec3(-0.55,0.25,0.5))), 0.0);",
+    " vec3 c = vC * (amb*0.70 + vec3(1.0,0.95,0.86)*diff*0.42 + vec3(0.9,0.95,1.0)*fill*0.10);",
+    " o = vec4(clamp(c,0.0,1.0), 1.0); }"
+  ].join("\n");
+
+  // 贴图（家具）
+  var 贴图顶点 = 头 + [
+    "in vec3 aPosition; in vec3 aNormal; in vec2 aUV;",
+    "uniform mat4 uProj, uView, uModel; uniform mat3 uNormalMat;",
+    "out vec3 vN; out vec2 vUV;",
+    "void main(){ vN = uNormalMat * aNormal; vUV = aUV;",
+    " gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0); }"
+  ].join("\n");
+  var 贴图片元 = 头 + [
+    "in vec3 vN; in vec2 vUV; uniform sampler2D uTex; out vec4 o;",
+    "void main(){ vec3 base = texture(uTex, vUV).rgb; vec3 n = normalize(vN);",
+    " float hemi = n.y*0.5+0.5;",
+    " vec3 amb = mix(vec3(0.60,0.56,0.52), vec3(1.02,0.99,0.94), hemi);",
+    " float diff = max(dot(n, normalize(vec3(0.5,0.9,0.55))), 0.0);",
+    " float fill = max(dot(n, normalize(vec3(-0.55,0.25,0.5))), 0.0);",
+    " vec3 c = base * (amb*0.72 + vec3(1.0,0.95,0.86)*diff*0.40 + vec3(0.9,0.95,1.0)*fill*0.10);",
+    " o = vec4(clamp(c,0.0,1.0), 1.0); }"
+  ].join("\n");
+
+  // 蒙皮贴图（玩偶）：uBone[30] 驱动
+  var 蒙皮顶点 = 头 + [
+    "in vec3 aPosition; in vec3 aNormal; in vec2 aUV; in vec4 aJoint; in vec4 aWeight;",
+    "uniform mat4 uProj, uView, uModel; uniform mat3 uNormalMat;",
+    "uniform mat4 uBone[30];",
+    "out vec3 vN; out vec2 vUV; out float vY;",
+    "void main(){",
+    " vec4 p = vec4(0.0); vec3 n = vec3(0.0);",
+    " for (int i = 0; i < 4; i++) {",
+    "   mat4 m = uBone[int(aJoint[i])];",
+    "   p += (m * vec4(aPosition, 1.0)) * aWeight[i];",
+    "   n += mat3(m) * aNormal * aWeight[i];",
+    " }",
+    " vY = aPosition.y; vN = uNormalMat * n; vUV = aUV;",
+    " gl_Position = uProj * uView * uModel * p; }"
+  ].join("\n");
+  var 蒙皮片元 = 头 + [
+    "in vec3 vN; in vec2 vUV; in float vY;",
+    "uniform sampler2D uTex;",
+    "uniform vec3 uTintTop, uTintPants, uTintShoes;",
+    "uniform float uOnTop, uOnPants, uOnShoes;",
+    "out vec4 o;",
+    "void main(){",
+    " vec3 base = texture(uTex, vUV).rgb;",
+    " float lum = dot(base, vec3(0.299, 0.587, 0.114));",
+    " float hi = max(max(base.r, base.g), base.b);",
+    " float lo = min(min(base.r, base.g), base.b);",
+    " float sat = (hi - lo) / max(hi, 0.001);",
+    " vec3 tint = base; float w = 0.0;",
+    // 鞋在最下面；牛仔裤是唯一明显偏蓝的色块；上衣是上身那片近白低饱和区域
+    " if (uOnShoes > 0.5 && vY < 0.13 && lum > 0.50 && sat < 0.30) { tint = uTintShoes; w = 1.0; }",
+    " else if (uOnPants > 0.5 && vY < 0.58 && base.b > base.r + 0.03 && sat > 0.10) { tint = uTintPants; w = 1.0; }",
+    " else if (uOnTop > 0.5 && vY > 0.26 && lum > 0.56 && sat < 0.20) { tint = uTintTop; w = 1.0; }",
+    // 用原贴图亮度当明暗系数，褶皱和阴影才不会被抹平
+    " vec3 t = mix(base, tint * (0.50 + 0.60 * lum), w);",
+    " vec3 n = normalize(vN);",
+    " float hemi = n.y*0.5+0.5;",
+    " vec3 amb = mix(vec3(0.60,0.56,0.52), vec3(1.02,0.99,0.94), hemi);",
+    " float diff = max(dot(n, normalize(vec3(0.5,0.9,0.55))), 0.0);",
+    " float fill = max(dot(n, normalize(vec3(-0.55,0.25,0.5))), 0.0);",
+    " vec3 c = t * (amb*0.72 + vec3(1.0,0.95,0.86)*diff*0.40 + vec3(0.9,0.95,1.0)*fill*0.10);",
+    " o = vec4(clamp(c,0.0,1.0), 1.0); }"
+  ].join("\n");
+
+  // ---------------- 立方体图元 ----------------
+  function 造盒(数据, 索引, cx, cy, cz, sx, sy, sz, 色) {
+    var 基 = 数据.位.length / 3;
+    var hx = sx/2, hy = sy/2, hz = sz/2;
+    var 面 = [
+      { n: [0,0,1],  v: [[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]] },
+      { n: [0,0,-1], v: [[hx,-hy,-hz],[-hx,-hy,-hz],[-hx,hy,-hz],[hx,hy,-hz]] },
+      { n: [1,0,0],  v: [[hx,-hy,hz],[hx,-hy,-hz],[hx,hy,-hz],[hx,hy,hz]] },
+      { n: [-1,0,0], v: [[-hx,-hy,-hz],[-hx,-hy,hz],[-hx,hy,hz],[-hx,hy,-hz]] },
+      { n: [0,1,0],  v: [[-hx,hy,hz],[hx,hy,hz],[hx,hy,-hz],[-hx,hy,-hz]] },
+      { n: [0,-1,0], v: [[-hx,-hy,-hz],[hx,-hy,-hz],[hx,-hy,hz],[-hx,-hy,hz]] }
+    ];
+    面.forEach(function (f, fi) {
+      f.v.forEach(function (p) {
+        数据.位.push(cx+p[0], cy+p[1], cz+p[2]);
+        数据.法.push(f.n[0], f.n[1], f.n[2]);
+        数据.色.push(色[0], 色[1], 色[2]);
+      });
+      var b = 基 + fi*4;
+      索引.push(b, b+1, b+2, b, b+2, b+3);
+    });
+  }
+  function 颜色(hex) {
+    return [parseInt(hex.slice(1,3),16)/255, parseInt(hex.slice(3,5),16)/255, parseInt(hex.slice(5,7),16)/255];
+  }
+
+  // ---------------- 启动 ----------------
+  var 染 = {};                 // { 上衣:#hex, 裤子:#hex, 鞋:#hex }，缺省键表示保持原色
+  async function 启动(选项) {
+    var t0 = performance.now();
+    染 = (选项 && 选项.染色) || {};
+    if (!window.房间模型 || !window.角色模型) throw new Error("模型数据未加载");
+    if (!document.createElement("canvas").getContext("webgl2")) throw new Error("NO_WEBGL2");
+
+    var 画 = 画布.getContext("webgl2", { antialias: true, alpha: true });
+    if (!画) throw new Error("NO_WEBGL2");
+
+    var 纯色 = 建程序(画, 纯色顶点, 纯色片元);
+    var 贴图 = 建程序(画, 贴图顶点, 贴图片元);
+    var 蒙皮 = 建程序(画, 蒙皮顶点, 蒙皮片元);
+
+    // ---- 房间壳几何 ----
+    var 壳 = { 位: [], 法: [], 色: [] }, 壳索 = [];
+    造盒(壳, 壳索, 0, -0.06, 0, 4.2, 0.12, 4.2, 颜色("#EBD9B8"));       // 地板
+    造盒(壳, 壳索, 0, 1.25, -2.10, 4.2, 2.5, 0.10, 颜色("#F6DFD6"));     // 后墙
+    造盒(壳, 壳索, -2.10, 1.25, 0, 0.10, 2.5, 4.2, 颜色("#F1E4CF"));     // 左墙
+    造盒(壳, 壳索, 0, 0.07, -2.04, 4.1, 0.14, 0.05, 颜色("#FBF3E4"));    // 踢脚
+    造盒(壳, 壳索, -2.04, 0.07, 0, 0.05, 0.14, 4.1, 颜色("#FBF3E4"));
+    造盒(壳, 壳索, 0.15, 0.012, 0.15, 2.6, 0.024, 1.9, 颜色("#DCE8CF")); // 地毯
+    var 壳缓存 = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 壳缓存);
+    画.bufferData(画.ARRAY_BUFFER, new Float32Array(壳.位), 画.STATIC_DRAW);
+    var 壳色 = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 壳色);
+    画.bufferData(画.ARRAY_BUFFER, new Float32Array(壳.色), 画.STATIC_DRAW);
+    var 壳索缓存 = 画.createBuffer(); 画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 壳索缓存);
+    画.bufferData(画.ELEMENT_ARRAY_BUFFER, new Uint16Array(壳索), 画.STATIC_DRAW);
+
+    // ---- 家具 ----
+    var 家 = 解析GLB(解b64(房间模型.b64));
+    var 家数 = 家.位置.length / 3;
+    var 家交错 = new Float32Array(家数 * 8);
+    for (var i = 0; i < 家数; i++) {
+      家交错[i*8]=家.位置[i*3]; 家交错[i*8+1]=家.位置[i*3+1]; 家交错[i*8+2]=家.位置[i*3+2];
+      家交错[i*8+3]=家.法线[i*3]; 家交错[i*8+4]=家.法线[i*3+1]; 家交错[i*8+5]=家.法线[i*3+2];
+      家交错[i*8+6]=家.uv[i*2]; 家交错[i*8+7]=家.uv[i*2+1];
+    }
+    var 家vb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 家vb);
+    画.bufferData(画.ARRAY_BUFFER, 家交错, 画.STATIC_DRAW);
+    var 家ib = 画.createBuffer(); 画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 家ib);
+    画.bufferData(画.ELEMENT_ARRAY_BUFFER, 家.索引, 画.STATIC_DRAW);
+    var 家纹理 = 画.createTexture();
+    var 家位图 = await createImageBitmap(new Blob([家.图字节], { type: 家.图类型 }));
+    画.bindTexture(画.TEXTURE_2D, 家纹理);
+    画.pixelStorei(画.UNPACK_FLIP_Y_WEBGL, false);
+    画.texImage2D(画.TEXTURE_2D, 0, 画.RGB, 画.RGB, 画.UNSIGNED_BYTE, 家位图);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MIN_FILTER, 画.LINEAR_MIPMAP_LINEAR);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MAG_FILTER, 画.LINEAR);
+    画.generateMipmap(画.TEXTURE_2D);
+    记("家具：" + 房间模型.三角形数.toLocaleString() + " 三角形，贴图 " + 家位图.width + "²");
+
+    // ---- 玩偶（蒙皮）----
+    var 偶 = 解析GLB(解b64(角色模型.b64));
+    var 偶数 = 偶.位置.length / 3;
+    var 偶交错 = new Float32Array(偶数 * 8);
+    for (var k = 0; k < 偶数; k++) {
+      偶交错[k*8]=偶.位置[k*3]; 偶交错[k*8+1]=偶.位置[k*3+1]; 偶交错[k*8+2]=偶.位置[k*3+2];
+      偶交错[k*8+3]=偶.法线[k*3]; 偶交错[k*8+4]=偶.法线[k*3+1]; 偶交错[k*8+5]=偶.法线[k*3+2];
+      偶交错[k*8+6]=偶.uv[k*2]; 偶交错[k*8+7]=偶.uv[k*2+1];
+    }
+    var 偶vb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 偶vb);
+    画.bufferData(画.ARRAY_BUFFER, 偶交错, 画.STATIC_DRAW);
+    var 偶jb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 偶jb);
+    画.bufferData(画.ARRAY_BUFFER, 偶.关节, 画.STATIC_DRAW);
+    var 偶wb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 偶wb);
+    画.bufferData(画.ARRAY_BUFFER, 偶.权重, 画.STATIC_DRAW);
+    var 偶ib = 画.createBuffer(); 画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 偶ib);
+    画.bufferData(画.ELEMENT_ARRAY_BUFFER, 偶.索引, 画.STATIC_DRAW);
+    var 偶纹理 = 画.createTexture();
+    var 偶位图 = await createImageBitmap(new Blob([偶.图字节], { type: 偶.图类型 }));
+    画.bindTexture(画.TEXTURE_2D, 偶纹理);
+    画.texImage2D(画.TEXTURE_2D, 0, 画.RGB, 画.RGB, 画.UNSIGNED_BYTE, 偶位图);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MIN_FILTER, 画.LINEAR_MIPMAP_LINEAR);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MAG_FILTER, 画.LINEAR);
+    画.generateMipmap(画.TEXTURE_2D);
+    记("玩偶：" + 角色模型.三角形数.toLocaleString() + " 三角形，骨骼 " + 角色模型.骨骼数);
+
+    // ---- 骨骼层级与绑定 ----
+    var 节点 = 偶.gltf.nodes, 骨 = 偶.骨关节, 绑逆 = 偶.绑定逆;
+    var 父 = {};
+    节点.forEach(function (n, i) { (n.children || []).forEach(function (c) { 父[c] = i; }); });
+    function 找名(名) {
+      for (var i = 0; i < 节点.length; i++) if (节点[i].name === 名) return i;
+      return -1;
+    }
+    var 骨位 = {};
+    骨.forEach(function (nodeIdx, gi) { 骨位[nodeIdx] = gi; });
+
+    // ---- 绑定姿势重建 ----
+    // 这批 AI 生成的模型有个共同毛病：骨骼节点的 TRS 全被抹掉（到处是 identity），
+    // 但 inverseBindMatrices 里还留着原始绑定姿势。此时 global(joint)·IBM ≠ I，
+    // 顶点会被揉成一团碎片。正确做法是从 IBM 反推绑定全局矩阵：
+    //   绑定全局 = inverse(IBM)，绑定局部 = inverse(父绑定全局) · 绑定全局
+    // 静止时 当前全局 = 绑定全局 → 蒙皮矩阵 = I → 顶点保持原样。
+    function 取IBM(gi) {
+      return new Float32Array(绑逆.buffer, 绑逆.byteOffset + gi * 64, 16);
+    }
+    var 绑全局 = [], 亲骨 = [], 绑局部 = [];
+    for (var gi = 0; gi < 骨.length; gi++) 绑全局.push(逆(取IBM(gi)));
+    for (var gj = 0; gj < 骨.length; gj++) {
+      // 不能只看直接父节点：Tripo 的关节链里夹着 R_Upperarm / R_Forearm 这类
+      // 「非关节的中间节点」，直接取父会把 Twist 骨变成孤立根节点，转肩膀传不下去。
+      // 要一路向上，直到遇到最近的关节祖先。
+      var 上 = 父[骨[gj]], 找到 = -1, 防死 = 0;
+      while (上 !== undefined && 防死++ < 64) {
+        if (骨位[上] !== undefined) { 找到 = 骨位[上]; break; }
+        上 = 父[上];
+      }
+      亲骨.push(找到);
+    }
+    for (var gk = 0; gk < 骨.length; gk++) {
+      绑局部.push(亲骨[gk] < 0 ? 绑全局[gk] : 乘(逆(绑全局[亲骨[gk]]), 绑全局[gk]));
+    }
+
+    function 算骨骼(姿势) {
+      var 当前 = new Array(骨.length);
+      function 取(gi) {
+        if (当前[gi]) return 当前[gi];
+        var m = 亲骨[gi] >= 0 ? 乘(取(亲骨[gi]), 绑局部[gi]) : 绑局部[gi];
+        var 姿 = 姿势[gi];
+        if (姿) {
+          // 关键：绕「世界轴」、以该关节的绑定位置为支点旋转。
+          // 骨骼局部轴往往沿骨头方向，直接转只会「拧」，看不出抬手臂。
+          var p0 = 绑全局[gi];
+          var 支点 = [p0[12], p0[13], p0[14]];
+          var R = 单位();
+          if (姿.绕X) R = 乘(绕X(姿.绕X), R);
+          if (姿.绕Y) R = 乘(绕Y(姿.绕Y), R);
+          if (姿.绕Z) R = 乘(绕Z(姿.绕Z), R);
+          var W = 乘(乘(平移(支点[0], 支点[1], 支点[2]), R),
+                     平移(-支点[0], -支点[1], -支点[2]));
+          m = 乘(W, m);
+        }
+        当前[gi] = m;
+        return m;
+      }
+      var 关节矩阵 = new Float32Array(骨.length * 16);
+      for (var g = 0; g < 骨.length; g++) {
+        关节矩阵.set(乘(取(g), 取IBM(g)), g * 16);
+      }
+      return 关节矩阵;
+    }
+
+    // 姿势：右手挥手（骨骼局部旋转，不是整体转动模型）
+    function 关节位(名) {
+      var n = 找名(名);
+      return (n >= 0 && 骨位[n] !== undefined) ? 骨位[n] : -1;
+    }
+    // Tripo 导出的蒙皮只保留了 Twist 骨，R_Upperarm / R_Forearm 本身不在关节表里，
+    // 所以按「实际存在的关节」取名：锁骨抬起整条手臂，前臂 Twist 当肘关节用。
+    var 右上臂 = 关节位("R_Clavicle"), 右前臂 = 关节位("R_ForearmTwist01"),
+        头 = 关节位("Head"), 脊 = 关节位("Spine02");
+    记("骨骼定位：R_Upperarm=关节" + 右上臂 + "，Head=关节" + 头 + "，共 " + 骨.length + " 根");
+
+    var 场景 = {
+      偏航: 0.52, 俯仰: 0.24, 距离: 5.6,
+      眼目标: [0.10, 0.84, -0.32]
+    };
+    var 偶位 = { x: 0.34, y: 0.02, z: -0.26, 缩放: 0.98, 朝向: -0.72 };
+    var 家位 = { x: 0.22, y: 0.0, z: -1.38, 缩放: 2.34, 朝向: 0 };
+
+    var uP = {}, 属性 = {};
+    [纯色, 贴图, 蒙皮].forEach(function (p, i) {
+      uP[i] = {
+        uProj: 画.getUniformLocation(p, "uProj"),
+        uView: 画.getUniformLocation(p, "uView"),
+        uModel: 画.getUniformLocation(p, "uModel"),
+        uNormalMat: 画.getUniformLocation(p, "uNormalMat"),
+        uColor: 画.getUniformLocation(p, "uColor"),
+        uTex: 画.getUniformLocation(p, "uTex"),
+        uBone: 画.getUniformLocation(p, "uBone"),
+        uTintTop: 画.getUniformLocation(p, "uTintTop"),
+        uTintPants: 画.getUniformLocation(p, "uTintPants"),
+        uTintShoes: 画.getUniformLocation(p, "uTintShoes"),
+        uOnTop: 画.getUniformLocation(p, "uOnTop"),
+        uOnPants: 画.getUniformLocation(p, "uOnPants"),
+        uOnShoes: 画.getUniformLocation(p, "uOnShoes")
+      };
+    });
+
+    画.enable(画.DEPTH_TEST);
+    画.enable(画.CULL_FACE);
+
+    var 时间 = 0, 挥到 = -1;
+    function 算姿势(t) {
+      var 姿势 = {};
+      if (脊 >= 0) 姿势[脊] = { 绕Z: Math.sin(t * 1.05) * 0.016 };
+      if (头 >= 0) 姿势[头] = { 绕Y: Math.sin(t * 0.65) * 0.11, 绕Z: 0.02 };
+      var 余 = 挥到 - t;
+      if (余 > 0) {
+        var 幅 = Math.min(1, 余 / 0.45);     // 收尾渐落，手不会突然掉下来
+        var 摆 = Math.sin(t * 7.5);
+        if (右上臂 >= 0) 姿势[右上臂] = { 绕X: (0.95 + 摆 * 0.12) * 幅 };
+        if (右前臂 >= 0) 姿势[右前臂] = { 绕X: (0.55 + 摆 * 0.20) * 幅 };
+      }
+      return 姿势;
+    }
+    window.小窝操作 = {
+      "挥手": function () { 挥到 = 时间 + 2.6; },
+      "复位": function () { 场景.偏航 = 0.52; 场景.俯仰 = 0.24; 场景.距离 = 5.6; 画一帧(); },
+      "设色": function (新染) { 染 = 新染 || {}; 画一帧(); }
+    };
+    function 画一帧() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = 画布.clientWidth * dpr, h = 画布.clientHeight * dpr;
+      if (画布.width !== w || 画布.height !== h) { 画布.width = w; 画布.height = h; 画.viewport(0, 0, w, h); }
+      画.clearColor(0, 0, 0, 0);
+      画.clear(画.COLOR_BUFFER_BIT | 画.DEPTH_BUFFER_BIT);
+
+      // 垂直视角固定时，画布越宽两侧越多空地。按宽高比把镜头推近，
+      // 让房间在 16:9 的舞台上也能填满，而窄屏保持原距离。
+      var 比 = w / h;
+      var 距 = 场景.距离 * (比 > 1.45 ? Math.max(0.80, 1.45 / 比 * 1.06) : 1);
+      var cp = Math.cos(场景.俯仰);
+      var 眼 = [场景.眼目标[0] + 距*cp*Math.sin(场景.偏航),
+                场景.眼目标[1] + 距*Math.sin(场景.俯仰),
+                场景.眼目标[2] + 距*cp*Math.cos(场景.偏航)];
+      var 投影 = 透视(40*Math.PI/180, w/h, 0.1, 60);
+      var 视图 = 观察(眼, 场景.眼目标, [0,1,0]);
+
+      // 1) 房间壳
+      画.useProgram(纯色);
+      画.uniformMatrix4fv(uP[0].uProj, false, 投影);
+      画.uniformMatrix4fv(uP[0].uView, false, 视图);
+      画.uniformMatrix4fv(uP[0].uModel, false, 单位());
+      画.uniformMatrix3fv(uP[0].uNormalMat, false, 法线阵3());
+      var aP0 = 画.getAttribLocation(纯色, "aPosition");
+      var aN0 = 画.getAttribLocation(纯色, "aNormal");
+      var aC0 = 画.getAttribLocation(纯色, "aColor");
+      画.bindBuffer(画.ARRAY_BUFFER, 壳缓存);
+      画.enableVertexAttribArray(aP0); 画.enableVertexAttribArray(aN0);
+      画.vertexAttribPointer(aP0, 3, 画.FLOAT, false, 12, 0);
+      画.vertexAttribPointer(aN0, 3, 画.FLOAT, false, 12, 0);
+      画.bindBuffer(画.ARRAY_BUFFER, 壳色);
+      画.enableVertexAttribArray(aC0);
+      画.vertexAttribPointer(aC0, 3, 画.FLOAT, false, 12, 0);
+      画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 壳索缓存);
+      画.drawElements(画.TRIANGLES, 壳索.length, 画.UNSIGNED_SHORT, 0);
+
+      // 2) 家具
+      画.useProgram(贴图);
+      画.uniformMatrix4fv(uP[1].uProj, false, 投影);
+      画.uniformMatrix4fv(uP[1].uView, false, 视图);
+      画.uniformMatrix4fv(uP[1].uModel, false,
+        乘(乘(平移(家位.x, 家位.y, 家位.z), 绕Y(家位.朝向)), 缩放(家位.缩放, 家位.缩放, 家位.缩放)));
+      画.uniformMatrix3fv(uP[1].uNormalMat, false, 法线阵(家位.缩放, 家位.缩放, 家位.缩放, 家位.朝向));
+      画.bindBuffer(画.ARRAY_BUFFER, 家vb);
+      var aP1 = 画.getAttribLocation(贴图, "aPosition"), aN1 = 画.getAttribLocation(贴图, "aNormal"),
+          aU1 = 画.getAttribLocation(贴图, "aUV");
+      画.enableVertexAttribArray(aP1); 画.enableVertexAttribArray(aN1); 画.enableVertexAttribArray(aU1);
+      画.vertexAttribPointer(aP1, 3, 画.FLOAT, false, 32, 0);
+      画.vertexAttribPointer(aN1, 3, 画.FLOAT, false, 32, 12);
+      画.vertexAttribPointer(aU1, 2, 画.FLOAT, false, 32, 24);
+      画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 家ib);
+      画.uniform1i(uP[1].uTex, 0);
+      画.activeTexture(画.TEXTURE0); 画.bindTexture(画.TEXTURE_2D, 家纹理);
+      画.drawElements(画.TRIANGLES, 家.索引.length, 画.UNSIGNED_INT, 0);
+
+      // 3) 玩偶（蒙皮）
+      画.useProgram(蒙皮);
+      画.uniformMatrix4fv(uP[2].uProj, false, 投影);
+      画.uniformMatrix4fv(uP[2].uView, false, 视图);
+      画.uniformMatrix4fv(uP[2].uModel, false,
+        乘(乘(平移(偶位.x, 偶位.y, 偶位.z), 绕Y(偶位.朝向)), 缩放(偶位.缩放, 偶位.缩放, 偶位.缩放)));
+      画.uniformMatrix3fv(uP[2].uNormalMat, false, 法线阵(偶位.缩放, 偶位.缩放, 偶位.缩放, 偶位.朝向));
+      画.bindBuffer(画.ARRAY_BUFFER, 偶vb);
+      var aP2 = 画.getAttribLocation(蒙皮, "aPosition"), aN2 = 画.getAttribLocation(蒙皮, "aNormal"),
+          aU2 = 画.getAttribLocation(蒙皮, "aUV");
+      画.enableVertexAttribArray(aP2); 画.enableVertexAttribArray(aN2); 画.enableVertexAttribArray(aU2);
+      画.vertexAttribPointer(aP2, 3, 画.FLOAT, false, 32, 0);
+      画.vertexAttribPointer(aN2, 3, 画.FLOAT, false, 32, 12);
+      画.vertexAttribPointer(aU2, 2, 画.FLOAT, false, 32, 24);
+      var aJ = 画.getAttribLocation(蒙皮, "aJoint"), aW = 画.getAttribLocation(蒙皮, "aWeight");
+      画.bindBuffer(画.ARRAY_BUFFER, 偶jb);
+      画.enableVertexAttribArray(aJ);
+      画.vertexAttribPointer(aJ, 4, 画.UNSIGNED_SHORT, false, 0, 0);
+      画.bindBuffer(画.ARRAY_BUFFER, 偶wb);
+      画.enableVertexAttribArray(aW);
+      画.vertexAttribPointer(aW, 4, 画.FLOAT, false, 0, 0);
+      画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 偶ib);
+
+      画.uniformMatrix4fv(uP[2].uBone, false, 算骨骼(算姿势(时间)));
+
+      // 染色开关：缺省全关，画面与原始贴图完全一致
+      画.uniform3fv(uP[2].uTintTop, 染.上衣 ? 颜色(染.上衣) : [1, 1, 1]);
+      画.uniform3fv(uP[2].uTintPants, 染.裤子 ? 颜色(染.裤子) : [0.29, 0.43, 0.60]);
+      画.uniform3fv(uP[2].uTintShoes, 染.鞋 ? 颜色(染.鞋) : [0.94, 0.94, 0.94]);
+      画.uniform1f(uP[2].uOnTop, 染.上衣 ? 1 : 0);
+      画.uniform1f(uP[2].uOnPants, 染.裤子 ? 1 : 0);
+      画.uniform1f(uP[2].uOnShoes, 染.鞋 ? 1 : 0);
+
+      画.uniform1i(uP[2].uTex, 0);
+      画.activeTexture(画.TEXTURE0); 画.bindTexture(画.TEXTURE_2D, 偶纹理);
+      画.drawElements(画.TRIANGLES, 偶.索引.length, 画.UNSIGNED_INT, 0);
+    }
+
+    // 交互
+    var 拖 = false, px = 0, py = 0;
+    画布.addEventListener("pointerdown", function (e) { 拖 = true; px = e.clientX; py = e.clientY; });
+    window.addEventListener("pointermove", function (e) {
+      if (!拖) return;
+      场景.偏航 += (e.clientX - px) * 0.006;
+      场景.俯仰 = Math.max(-0.1, Math.min(1.0, 场景.俯仰 - (e.clientY - py) * 0.004));
+      px = e.clientX; py = e.clientY;
+    });
+    window.addEventListener("pointerup", function () { 拖 = false; });
+
+    var 静帧 = location.search.indexOf("静帧") >= 0;
+    if (静帧) 时间 = 0.58;
+    画一帧();
+    if (!静帧) setInterval(function () { 时间 += 0.033; 画一帧(); }, 40);
+    if (window.小窝就绪) window.小窝就绪();
+  }
+
+  window.启动小窝 = function (选项) {
+    return 启动(选项).catch(function (e) {
+      if (window.小窝失败) window.小窝失败(e && e.message);
+      console.error(e);
+    });
+  };
+})();
+  </script>
+
+  <script>
+  /* ---------- 小窝页面逻辑：存储、换装、宠物、存档、懒加载 ---------- */
+  (function () {
+    "use strict";
+    var 键 = window.养成反馈 ? 养成反馈.键 : {
+      存档: "食谱搭配-养成存档", 每日: "食谱搭配-养成每日",
+      流水: "食谱搭配-养成流水", 场景: "食谱搭配-养成场景"
+    };
+
+    function 读(名, 兜底) {
+      try { var s = localStorage.getItem(名); return s ? JSON.parse(s) : 兜底; }
+      catch (e) { return 兜底; }
+    }
+    function 写(名, 值) {
+      try { localStorage.setItem(名, JSON.stringify(值)); return true; }
+      catch (e) { return false; }
+    }
+
+    // 本页内存里有一份存档副本。如果用户在别的页面刚打卡赚了经验，
+    // 这里直接把自己的副本写回去就会把那笔经验覆盖掉。
+    // 所以任何写入都先重读、再合并、最后落盘。
+    function 合并写(改动) {
+      var 最新 = Object.assign({}, 默认, 读(键.存档, {}) || {});
+      最新.形象 = Object.assign({}, 默认.形象, 最新.形象 || {});
+      改动(最新);
+      写(键.存档, 最新);
+      存档 = 最新;
+      刷新顶栏();
+      return 最新;
+    }
+
+    var 系统 = window.养成系统;
+    var 默认 = 系统.默认存档();
+    var 存档 = Object.assign({}, 默认, 读(键.存档, {}) || {});
+    存档.形象 = Object.assign({}, 默认.形象, 存档.形象 || {});
+    var 染色 = 存档.形象.染色 || {};
+
+    function 刷新顶栏() {
+      var 级 = 系统.由经验算等级(存档.经验 || 0);
+      var 等 = document.getElementById("顶栏等级");
+      if (等) 等.innerHTML = "Lv.<b>" + 级.等级 + "</b> <small id=\"顶栏金币\">" +
+        (存档.金币 || 0) + " 币</small>";
+    }
+
+    // ---------- 换装（染色） ----------
+    var 款式表 = [
+      { 键: "上衣", 名: "上衣", 色: [["#FFFFFF", "白"], ["#E4574C", "红"], ["#F2C75C", "黄"],
+                                     ["#7FAE6A", "绿"], ["#5B84B8", "蓝"], ["#3A3A3A", "深灰"]] },
+      { 键: "裤子", 名: "裤子", 色: [["#4A6D9A", "牛仔"], ["#C9B79C", "米"], ["#8A8A80", "灰"],
+                                     ["#3A3A3A", "黑"], ["#6E8B5E", "军绿"], ["#B4674E", "棕"]] },
+      { 键: "鞋",   名: "鞋",   色: [["#FFFFFF", "白"], ["#3A3A3A", "黑"], ["#E4574C", "红"],
+                                     ["#C9B79C", "米"]] }
+    ];
+
+    function 画换装() {
+      var 区 = document.getElementById("换装区");
+      区.innerHTML = "";
+      款式表.forEach(function (款) {
+        var 行 = document.createElement("div");
+        行.className = "换装行";
+        var 名 = document.createElement("span");
+        名.className = "换装名";
+        名.textContent = 款.名;
+        行.appendChild(名);
+
+        var 原 = document.createElement("button");
+        原.type = "button";
+        原.className = "色点 原色";
+        原.title = "保持原色";
+        原.setAttribute("aria-label", 款.名 + "保持原色");
+        if (!染色[款.键]) 原.dataset.选 = "1";
+        原.addEventListener("click", function () { 设色(款.键, null); });
+        行.appendChild(原);
+
+        款.色.forEach(function (对) {
+          var 点 = document.createElement("button");
+          点.type = "button";
+          点.className = "色点";
+          点.style.background = 对[0];
+          点.title = 对[1];
+          点.setAttribute("aria-label", 款.名 + 对[1]);
+          if (染色[款.键] === 对[0]) 点.dataset.选 = "1";
+          点.addEventListener("click", function () { 设色(款.键, 对[0]); });
+          行.appendChild(点);
+        });
+        区.appendChild(行);
+      });
+
+      var 已 = 款式表.filter(function (款) { return 染色[款.键]; })
+        .map(function (款) { return 款.名; });
+      document.getElementById("换装提示").textContent =
+        已.length ? "当前：已改 " + 已.join(" / ") : "当前：全部保持原色";
+    }
+
+    function 设色(键名, 值) {
+      if (值) 染色[键名] = 值; else delete 染色[键名];
+      合并写(function (存) { 存.形象.染色 = 染色; });
+      画换装();
+      if (window.小窝操作) 小窝操作.设色(染色);
+    }
+
+    // ---------- 宠物 ----------
+    var 宠物款 = { "猫": "🐱", "狗": "🐶", "兔": "🐰" };
+
+    function 今天() {
+      var d = new Date();
+      return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    }
+
+    function 画宠物() {
+      var 区 = document.getElementById("宠物区");
+      var 宠 = 存档.宠物;
+
+      if (!宠) {
+        区.innerHTML = '<p class="宠物空">还没有伙伴。领养一只，它会跟着你的打卡状态变心情。</p>' +
+                      '<div class="领养组">' +
+                      Object.keys(宠物款).map(function (k) {
+                        return '<button type="button" data-领养="' + k + '">' + 宠物款[k] + " " + k + "</button>";
+                      }).join("") + "</div>";
+        区.querySelectorAll("[data-领养]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            合并写(function (存) {
+              存.宠物 = { 种类: b.dataset.领养, 名字: "小" + b.dataset.领养,
+                          亲密度: 0, 领养日: 今天(), 上次喂食日: null };
+            });
+            画宠物();
+          });
+        });
+        return;
+      }
+
+      var 心 = 系统.宠物心情(读(键.每日, 系统.默认每日()), 存档, {});
+      区.innerHTML =
+        '<div class="宠物头"><span class="宠物头像">' + (宠物款[宠.种类] || "🐾") + "</span>" +
+        '<input class="宠物名" id="宠物名" maxlength="8" value="' + (宠.名字 || "") + '" aria-label="宠物名字">' +
+        '<span class="宠物注" style="margin:0">' + 心.心情 + " · 亲密度 " + 心.亲密度 + "</span></div>" +
+        '<p class="宠物注">' + 宠.种类 + " · 领养于 " + (宠.领养日 || "—") +
+        "。名字最多 8 个字，改完点一下空白处就存好。</p>";
+
+      var 输入 = document.getElementById("宠物名");
+      输入.addEventListener("change", function () {
+        var 新 = (输入.value || "").trim().slice(0, 8);
+        if (!新) { 输入.value = 宠.名字; return; }
+        合并写(function (存) { if (存.宠物) 存.宠物.名字 = 新; });
+      });
+    }
+
+    // ---------- 存档导出 / 导入 ----------
+    function 导出() {
+      var 包 = { 版本: 1, 导出日: 今天() };
+      [["存档", 键.存档], ["每日", 键.每日], ["流水", 键.流水], ["场景", 键.场景]].forEach(function (对) {
+        var v = 读(对[1], null);
+        if (v !== null) 包[对[0]] = v;
+      });
+      var 文 = JSON.stringify(包);
+      var 框 = document.getElementById("存档文本");
+      框.value = 文;
+      框.select();
+      document.getElementById("存档回执").textContent =
+        "已导出 " + Math.round(文.length / 1024) + "KB，复制这段文本存好即可。";
+    }
+
+    function 导入() {
+      var 回 = document.getElementById("存档回执");
+      var 文 = (document.getElementById("存档文本").value || "").trim();
+      if (!文) { 回.textContent = "先把导出的文本粘进来。"; return; }
+      var 包;
+      try { 包 = JSON.parse(文); }
+      catch (e) { 回.textContent = "这段文本不是存档（解析失败），没有改动任何东西。"; return; }
+      if (!包 || typeof 包 !== "object" || !包.存档) { 回.textContent = "缺少「存档」字段，拒绝导入。"; return; }
+      if (包.版本 !== 1) { 回.textContent = "存档版本不是 1，拒绝导入。"; return; }
+
+      写(键.存档, 包.存档);
+      if (包.每日) 写(键.每日, 包.每日);
+      if (包.流水) 写(键.流水, 包.流水);
+      if (包.场景) 写(键.场景, 包.场景);
+      回.textContent = "导入完成，正在重新载入…";
+      setTimeout(function () { location.reload(); }, 400);
+    }
+
+    // ---------- 模型懒加载 ----------
+    var 遮罩 = document.getElementById("遮罩"), 进度条 = document.getElementById("进度条");
+    function 进度(文字, 百分比) {
+      document.getElementById("遮罩文字").textContent = 文字;
+      if (百分比) 进度条.style.width = 百分比 + "%";
+    }
+    window.小窝进度 = function (s) { 进度(s, 68); };
+    window.小窝就绪 = function () {
+      进度条.style.width = "100%";
+      遮罩.dataset.隐 = "1";
+      // 直接摘掉，不依赖 CSS 过渡是否跑完：模型解码是长任务，
+      // 过渡可能刚开始就被下一次绘制截断，留下一层半透明薄膜。
+      遮罩.style.display = "none";
+    };
+    window.小窝失败 = function (原因) {
+      if (原因 === "NO_WEBGL2") {
+        遮罩.innerHTML = '<p class="小窝失败">这台电脑的浏览器没开 WebGL2，小窝暂时显示不了。<br>' +
+          '换成新版 Chrome 或 Edge 再打开就好，打卡和换装数据都不受影响。</p>';
+      } else {
+        遮罩.innerHTML = '<p class="小窝失败">小窝没能加载出来：' + 原因 + '<br>' +
+          '打卡、换装、宠物都还能正常用，刷新一次再试试。</p>';
+      }
+    };
+
+    function 载脚本(路径, 完成后) {
+      var s = document.createElement("script");
+      s.src = 路径;
+      s.onload = 完成后;
+      s.onerror = function () { window.小窝失败("找不到模型文件 " + 路径); };
+      document.head.appendChild(s);
+    }
+
+    function 开始加载() {
+      if (!document.createElement("canvas").getContext("webgl2")) { window.小窝失败("NO_WEBGL2"); return; }
+      进度("正在读取房间模型…", 18);
+      载脚本("数据/房间模型.js", function () {
+        进度("正在读取角色模型…", 42);
+        载脚本("数据/角色模型.js", function () {
+          进度("正在拼装小窝…", 66);
+          setTimeout(function () {
+            if (window.启动小窝) window.启动小窝({ 染色: 染色 });
+            else window.小窝失败("渲染器未就绪");
+          }, 30);
+        });
+      });
+    }
+
+    document.getElementById("挥手按钮").addEventListener("click", function () {
+      if (window.小窝操作) 小窝操作.挥手();
+    });
+    document.getElementById("复位按钮").addEventListener("click", function () {
+      if (window.小窝操作) 小窝操作.复位();
+    });
+    document.getElementById("导出按钮").addEventListener("click", 导出);
+    document.getElementById("导入按钮").addEventListener("click", 导入);
+
+    刷新顶栏();
+    画换装();
+    画宠物();
+    开始加载();
+  })();
+  </script>
+</body>
+</html>
