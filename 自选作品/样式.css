@@ -1,5 +1,5 @@
 /* 食谱搭配 —— 自然系视觉（暖纸底 / 深绿主导 / 番茄红警示）
- * 版式：吸顶导航 + 今日餐盘首屏 + 左右双栏（移动端单列）
+ * 版式 v0.5：左侧常驻导航 + 一页一功能区（每页一个 HTML，共用本样式）
  * 字体：中文衬线做标题与大数字，系统无衬线做正文，零外链、离线可用
  */
 
@@ -27,15 +27,7 @@
   --衬线: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
   --无衬线: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
   --动效: 0.2s ease-out;
-  /* 两层吸顶高度：锚点跳转与左栏 sticky 都要避开，避免标题被遮住 */
-  --顶栏高: 58px;
-  --区块栏高: 46px;
-  --避让高: 110px;
-}
-
-/* 所有可跳转的卡片都留出吸顶栏的空间 */
-#进度卡片, #推荐卡片, #计划卡片, #专区卡片, #记录卡片 {
-  scroll-margin-top: var(--避让高);
+  --侧栏宽: 224px;
 }
 
 * { box-sizing: border-box; }
@@ -44,6 +36,9 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
   background: var(--纸底);
   color: var(--文字);
   font-family: var(--无衬线);
@@ -66,76 +61,135 @@ b, strong, .热量, .营养明细, .计划日统计 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 顶栏（吸顶细导航） ---------- */
-.顶栏 {
+/* ---------- 左侧常驻导航 ---------- */
+.侧栏 {
+  width: var(--侧栏宽);
+  flex: none;
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: var(--卡白);
-  border-bottom: 1px solid var(--边框);
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px 14px 18px;
+  background: linear-gradient(180deg, #27500A 0%, #1D4007 100%);
+  color: #E7F1DA;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.顶栏内容 {
-  max-width: 1060px;
-  margin: 0 auto;
-  padding: 10px 20px;
+.侧栏::-webkit-scrollbar { width: 6px; }
+.侧栏::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); border-radius: 999px; }
+.侧栏品牌 { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+.品牌名 {
+  font-family: var(--衬线);
+  font-size: 22px;
+  letter-spacing: .06em;
+  color: #FFFFFF;
+  text-decoration: none;
+}
+.品牌副 { font-size: 11px; letter-spacing: .08em; color: #AFCF92; }
+.侧栏目标 {
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  background: rgba(255,255,255,.09);
+}
+.侧栏目标标签 { display: block; font-size: 11px; color: #C4DCA9; }
+.侧栏目标值 b {
+  font-family: var(--衬线);
+  font-size: 25px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+.侧栏目标值 small { font-size: 11px; color: #C4DCA9; }
+.侧栏今日 {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,.14);
+  font-size: 11.5px;
+  color: #C4DCA9;
+}
+.侧栏导航 { display: flex; flex-direction: column; gap: 3px; }
+.导航组名 {
+  margin: 12px 8px 4px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: #9FC07F;
+}
+.导航组名:first-child { margin-top: 0; }
+.导航项 {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: #E7F1DA;
+  text-decoration: none;
+  transition: background var(--动效), color var(--动效);
 }
-.站名组 { display: flex; align-items: baseline; gap: 10px; }
-.顶栏 h1 {
+.导航项:hover { background: rgba(255,255,255,.13); color: #FFFFFF; }
+.导航项.选中 { background: var(--绿-浅); color: var(--绿-深); font-weight: 500; }
+.导航图标 { width: 20px; text-align: center; font-size: 15px; flex: none; }
+.侧栏底注 {
+  margin-top: auto;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1.75;
+  color: #A8C58D;
+}
+
+/* ---------- 右侧主体：页面顶栏 + 内容 ---------- */
+.主体 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.页面顶栏 {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(244, 241, 232, .95);
+  border-bottom: 1px solid var(--边框);
+}
+.页面标题组 h1 {
   font-family: var(--衬线);
   font-size: 21px;
-  letter-spacing: 0.06em;
+  letter-spacing: .05em;
   color: var(--绿-深);
 }
-.副标题 {
-  font-size: 12px;
-  color: var(--文字-淡);
-  letter-spacing: 0.08em;
-}
-.主导航 {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-.主导航按钮 {
-  padding: 7px 20px;
-  font-size: 14px;
-  color: var(--文字-淡);
-  background: transparent;
-  border: none;
-  border-radius: 999px;
-  transition: color var(--动效), background var(--动效);
-}
-.主导航按钮:hover { color: var(--绿-主); background: var(--绿-浅); }
-.主导航按钮.选中 {
-  color: var(--卡白);
-  background: var(--绿-主);
-}
-.顶栏目标 {
-  font-size: 13px;
-  color: var(--文字-淡);
-  white-space: nowrap;
-}
+.页面标题组 p { margin: 2px 0 0; font-size: 12.5px; color: var(--文字-淡); }
+.顶栏目标 { font-size: 13px; color: var(--文字-淡); white-space: nowrap; }
 .顶栏目标 b {
   font-family: var(--衬线);
-  font-size: 17px;
-  color: var(--绿-深);
+  font-size: 18px;
   font-weight: 500;
+  color: var(--绿-深);
 }
 .顶栏目标 small { font-size: 11px; }
-
-/* ---------- 布局 ---------- */
 .容器 {
+  width: 100%;
   max-width: 1060px;
   margin: 0 auto;
-  padding: 22px 20px 56px;
+  padding: 22px 28px 48px;
   display: grid;
   gap: 16px;
+  align-content: start;
 }
-.功能区 { display: grid; gap: 16px; }
-.功能区[hidden] { display: none; }
+.双列网格 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.目标布局 { grid-template-columns: 1.15fr 1fr; }
+.速览卡 .提示 b { font-size: 16px; color: var(--绿-深); }
+.说明列表 {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #5C5033;
+}
+.说明列表 li::marker { color: var(--黄-字); }
+.说明列表 strong { color: var(--黄-字); }
+.提示卡片 .提示 { margin-top: 12px; color: #7A5F1C; }
 
 .卡片 {
   background: var(--卡白);
@@ -208,7 +262,8 @@ b, strong, .热量, .营养明细, .计划日统计 {
 
 .营养概览 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  /* 固定 2×2：四项营养均匀分布，不会出现 3+1 的孤行 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 .营养项 {
@@ -227,7 +282,8 @@ b, strong, .热量, .营养明细, .计划日统计 {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 16px;
-  align-items: stretch;
+  /* 各自按内容高度，不让短卡片被推荐列表撑出一大块空白 */
+  align-items: start;
 }
 .首屏推荐卡 {
   display: flex;
@@ -238,129 +294,15 @@ b, strong, .热量, .营养明细, .计划日统计 {
 .首屏推荐卡 .食谱项 { padding: 10px 12px; }
 .首屏推荐卡 .提示 { margin-top: 0; }
 
-/* ---------- 区块导航（第二层吸顶，仅在饮食分区可见） ---------- */
-.区块导航 {
-  position: sticky;
-  top: var(--顶栏高);
-  z-index: 15;
-  align-self: start;
-  justify-self: stretch;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 4px;
-  background: var(--纸底);
-  border-bottom: 1px solid var(--边框);
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.区块导航[hidden] { display: none; }
-.区块导航标记 {
-  flex: none;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--文字-淡);
-  padding: 0 8px 0 4px;
-}
-.区块导航按钮 {
-  flex: none;
-  padding: 5px 14px;
-  font-size: 13px;
-  white-space: nowrap;
-  color: var(--文字-淡);
-  background: var(--卡白);
-  border: 1px solid var(--边框);
-  border-radius: 999px;
-  transition: color var(--动效), background var(--动效), border-color var(--动效);
-}
-.区块导航按钮:hover { color: var(--绿-主); border-color: var(--绿-边); }
-.区块导航按钮.选中 {
-  color: var(--卡白);
-  background: var(--绿-主);
-  border-color: var(--绿-主);
-}
-
-/* ---------- 饮食双栏 ---------- */
-.饮食布局 {
-  display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.左栏, .右栏 { display: grid; gap: 16px; }
-/* 滚动时长驻：单面板 + 标签切换，随时可见且不把内容顶出视口 */
-.左栏 {
-  position: sticky;
-  top: var(--避让高);
-  align-self: start;
-  gap: 10px;
-  /* 关键：不限高时三张卡会超过视口，sticky 粘住后底部永远够不到 */
-  max-height: calc(100vh - var(--避让高) - 16px);
-  overflow-y: auto;
-  /* 不设 contain：左栏滚到底后滚轮要能接着滚页面，别把用户困在侧栏里 */
-  scrollbar-width: thin;
-  scrollbar-color: var(--边框-深) transparent;
-}
-.左栏::-webkit-scrollbar { width: 6px; }
-.左栏::-webkit-scrollbar-thumb { background: var(--边框-深); border-radius: 999px; }
-.左栏 > .卡片[hidden] { display: none; }
-
-/* 标签条吸在左栏内部顶端，滚动时切换入口始终可点 */
-.左栏标签 {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  gap: 4px;
-  padding: 5px;
-  background: var(--纸底);
-  border: 1px solid var(--边框);
-  border-radius: 999px;
-}
-.左栏标签按钮 {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 7px 4px;
-  font-size: 12.5px;
-  white-space: nowrap;
-  color: var(--文字-淡);
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  transition: color var(--动效), background var(--动效);
-}
-.左栏标签按钮:hover { color: var(--绿-主); }
-.左栏标签按钮.选中 {
-  color: var(--卡白);
-  background: var(--绿-主);
-  font-weight: 500;
-}
-.左栏计数 {
-  min-width: 18px;
-  padding: 0 5px;
-  font-size: 11px;
-  line-height: 17px;
-  border-radius: 999px;
-  background: var(--绿-浅);
-  color: var(--绿-深);
-}
-.左栏标签按钮.选中 .左栏计数 { background: rgba(255, 255, 255, 0.24); color: var(--卡白); }
-
-/* 左栏卡片收紧：一次只显示一张，不留大片空白 */
-.左栏 .卡片 { padding: 16px; }
-.左栏 .卡片 > h2 { margin-bottom: 12px; }
-/* 今日记录改紧凑行：隐藏人群标签与四项营养明细，一条约 40px */
-.左栏 .食谱列表 { gap: 7px; }
-.左栏 .食谱项 { padding: 8px 10px; gap: 8px; }
-.左栏 .食谱项 .人群标签,
-.左栏 .食谱项 .营养明细 { display: none; }
-.左栏 .食谱项 .热量 { min-width: 56px; }
-.左栏 .食谱项 .热量 b { font-size: 15px; }
-.左栏 .食谱项 .移除按钮 { padding: 5px 9px; font-size: 12px; }
-.左栏 .记录餐次 { margin-right: 4px; }
+/* ---------- 记录与回看：紧凑行 ---------- */
+.紧凑列表 { gap: 7px; }
+.紧凑列表 .食谱项 { padding: 8px 10px; gap: 8px; }
+.紧凑列表 .食谱项 .人群标签,
+.紧凑列表 .食谱项 .营养明细 { display: none; }
+.紧凑列表 .食谱项 .热量 { min-width: 56px; }
+.紧凑列表 .食谱项 .热量 b { font-size: 15px; }
+.紧凑列表 .食谱项 .移除按钮 { padding: 5px 9px; font-size: 12px; }
+.紧凑列表 .记录餐次 { margin-right: 4px; }
 
 /* ---------- 食谱专区：显示范围 ---------- */
 .专区显示行 {
@@ -886,6 +828,7 @@ button {
 
 /* ---------- 页脚 ---------- */
 .页脚 {
+  margin-top: auto;   /* 内容短时把页脚推到页面底部 */
   text-align: center;
   font-size: 12px;
   color: var(--文字-淡);
@@ -895,27 +838,51 @@ button {
 .页脚 .版权 { margin-top: 6px; font-size: 11px; opacity: 0.8; }
 
 /* ---------- 响应式 ---------- */
+@media (max-width: 1100px) {
+  .双列网格, .目标布局 { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 900px) {
-  .首屏网格 { grid-template-columns: 1fr; }
-  .饮食布局 { grid-template-columns: 1fr; }
-  /* 单列时左栏不再常驻，也不限高：标签切换仍保留，避免三张卡连成长条 */
-  .左栏 {
+  body { flex-direction: column; }
+  .侧栏 {
     position: static;
-    max-height: none;
-    overflow: visible;
+    width: 100%;
+    height: auto;
+    padding: 12px 14px;
+    gap: 10px;
   }
-  .左栏标签 { position: static; }
+  .侧栏品牌 { flex-direction: row; align-items: baseline; gap: 10px; padding: 0; }
+  .侧栏底注 { display: none; }
+  /* 窄屏仍保留目标与「今日 N 道」反馈：收成一条紧凑横条 */
+  .侧栏目标 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+  .侧栏目标标签, .侧栏目标值 small { display: none; }
+  .侧栏目标值 b { font-size: 17px; }
+  .侧栏今日 { margin-top: 0; padding-top: 0; border-top: none; }
+  .侧栏导航 {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .导航组名 { display: none; }
+  .导航项 { flex: none; white-space: nowrap; padding: 6px 11px; font-size: 13px; }
+  .页面顶栏 { position: static; padding: 12px 16px; }
+  .容器 { padding: 16px 16px 40px; }
+  .首屏网格 { grid-template-columns: 1fr; }
   .今日数字 strong { font-size: 38px; }
 }
 
 @media (max-width: 560px) {
-  :root { --顶栏高: 50px; --避让高: 96px; }
-  .顶栏内容 { gap: 10px; padding: 8px 14px; }
-  .副标题 { display: none; }
+  .品牌副 { display: none; }
   .顶栏目标 { display: none; }
-  .区块导航标记 { display: none; }
-  .区块导航按钮 { padding: 5px 11px; font-size: 12px; }
-  .容器 { padding: 16px 14px 44px; }
+  .容器 { padding: 14px 12px 36px; }
   .今日卡片 { padding: 18px; }
   .食谱项 { flex-wrap: wrap; }
   .热量 { min-width: 0; text-align: left; }

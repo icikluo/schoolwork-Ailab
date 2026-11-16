@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动作库 · 食谱搭配</title>
+  <link rel="stylesheet" href="样式.css">
+</head>
+<body data-页面="训练">
+  <aside class="侧栏">
+    <div class="侧栏品牌">
+      <a class="品牌名" href="index.html">食谱搭配</a>
+      <span class="品牌副">吃练一体 · 纯离线</span>
+    </div>
+    <div class="侧栏目标">
+      <span class="侧栏目标标签">每日目标</span>
+      <div class="侧栏目标值"><b id="侧栏目标">—</b><small> kcal</small></div>
+      <div class="侧栏今日" id="侧栏今日">今日 0 道 · 0 kcal</div>
+    </div>
+    <nav class="侧栏导航" aria-label="主导航">
+      <p class="导航组名">饮食管理</p>
+      <a class="导航项" href="index.html" data-页="总览"><span class="导航图标">🥗</span>今日总览</a>
+      <a class="导航项" href="目标.html" data-页="目标"><span class="导航图标">🎯</span>我的目标</a>
+      <a class="导航项" href="食谱.html" data-页="食谱"><span class="导航图标">📖</span>食谱专区</a>
+      <a class="导航项" href="计划.html" data-页="计划"><span class="导航图标">🗓</span>一周计划</a>
+      <a class="导航项" href="记录.html" data-页="记录"><span class="导航图标">🕘</span>记录与回看</a>
+      <p class="导航组名">训练</p>
+      <a class="导航项 选中" href="训练.html" data-页="训练" aria-current="page"><span class="导航图标">💪</span>动作库</a>
+    </nav>
+    <div class="侧栏底注">记录与目标存在本机浏览器<br>换页、刷新都不会丢</div>
+  </aside>
+  <div class="主体">
+    <header class="页面顶栏">
+      <div class="页面标题组">
+        <h1>动作库</h1>
+        <p>28 个健身动作，按部位查姿势要点与常见错误</p>
+      </div>
+      <div class="顶栏目标">目标 <b id="顶栏目标">—</b> <small>kcal</small></div>
+    </header>
+
+    <main class="容器">
+      <section class="卡片" id="动作卡片">
+        <h2>健身动作教程</h2>
+        <p class="提示" id="动作说明">按部位浏览动作要点。练前请充分热身；有伤病或特殊情况请先咨询专业人士。</p>
+        <div class="分区导航" id="部位导航" role="tablist"></div>
+        <div class="分区内容" id="动作内容"></div>
+      </section>
+
+      <section class="卡片 提示卡片">
+        <h2>安全说明</h2>
+        <ul class="安全列表">
+          <li>本页面内容为通用健身参考，<strong>不构成专业教练指导或医疗建议</strong>。</li>
+          <li>有伤病、心血管疾病、孕期等特殊情况，请先咨询医生或专业教练。</li>
+          <li>训练中若出现疼痛、眩晕、胸闷，立刻停止并休息。</li>
+          <li>初次训练请从轻重量、少次数开始，循序渐进。</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="页脚">
+      <p>数据为教学用估算值，不构成医学或营养建议。</p>
+      <p class="版权">食物图片来自 <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>，遵循 Unsplash License。</p>
+    </footer>
+  </div>
+
+  <script src="数据/食谱.js"></script>
+  <script src="数据/动作.js"></script>
+  <script src="脚本.js"></script>
+</body>
+</html>

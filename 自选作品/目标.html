@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的目标 · 食谱搭配</title>
+  <link rel="stylesheet" href="样式.css">
+</head>
+<body data-页面="目标">
+  <aside class="侧栏">
+    <div class="侧栏品牌">
+      <a class="品牌名" href="index.html">食谱搭配</a>
+      <span class="品牌副">吃练一体 · 纯离线</span>
+    </div>
+    <div class="侧栏目标">
+      <span class="侧栏目标标签">每日目标</span>
+      <div class="侧栏目标值"><b id="侧栏目标">—</b><small> kcal</small></div>
+      <div class="侧栏今日" id="侧栏今日">今日 0 道 · 0 kcal</div>
+    </div>
+    <nav class="侧栏导航" aria-label="主导航">
+      <p class="导航组名">饮食管理</p>
+      <a class="导航项" href="index.html" data-页="总览"><span class="导航图标">🥗</span>今日总览</a>
+      <a class="导航项 选中" href="目标.html" data-页="目标" aria-current="page"><span class="导航图标">🎯</span>我的目标</a>
+      <a class="导航项" href="食谱.html" data-页="食谱"><span class="导航图标">📖</span>食谱专区</a>
+      <a class="导航项" href="计划.html" data-页="计划"><span class="导航图标">🗓</span>一周计划</a>
+      <a class="导航项" href="记录.html" data-页="记录"><span class="导航图标">🕘</span>记录与回看</a>
+      <p class="导航组名">训练</p>
+      <a class="导航项" href="训练.html" data-页="训练"><span class="导航图标">💪</span>动作库</a>
+    </nav>
+    <div class="侧栏底注">记录与目标存在本机浏览器<br>换页、刷新都不会丢</div>
+  </aside>
+  <div class="主体">
+    <header class="页面顶栏">
+      <div class="页面标题组">
+        <h1>我的目标</h1>
+        <p>填一次身体数据，算出今天该吃多少</p>
+      </div>
+      <div class="顶栏目标">目标 <b id="顶栏目标">—</b> <small>kcal</small></div>
+    </header>
+
+    <main class="容器">
+      <div class="双列网格 目标布局">
+        <section class="卡片" id="设置卡片">
+          <div class="卡片头">
+            <h2>我的目标</h2>
+            <button type="button" class="文字按钮" id="设置开关">收起</button>
+          </div>
+          <p class="设置摘要" id="设置摘要">先填身体数据，算出每日目标。</p>
+        <div class="设置主体" id="设置主体">
+          <form id="设置表单" class="表单网格">
+            <label>性别
+              <select id="性别">
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </label>
+            <label>年龄（岁）
+              <input id="年龄" type="number" min="10" max="100" value="22" required>
+            </label>
+            <label>身高（cm）
+              <input id="身高" type="number" min="100" max="250" step="0.1" value="165" required>
+            </label>
+            <label>体重（kg）
+              <input id="体重" type="number" min="25" max="200" step="0.1" value="55" required>
+            </label>
+            <label>活动量
+              <select id="活动量">
+                <option value="1.2">久坐（几乎不运动）</option>
+                <option value="1.375">轻度（每周1–3次）</option>
+                <option value="1.55">中度（每周3–5次）</option>
+                <option value="1.725">高度（每周6–7次）</option>
+              </select>
+            </label>
+            <label>人群
+              <select id="人群">
+                <option value="减脂">减脂</option>
+                <option value="增肌">增肌</option>
+                <option value="控糖">控糖</option>
+                <option value="均衡">均衡</option>
+              </select>
+            </label>
+            <button type="submit" class="主按钮">计算目标</button>
+          </form>
+        </div>
+        <div class="目标结果" id="目标结果" hidden>
+          <span class="标签">每日目标卡路里</span>
+          <strong id="目标值">—</strong>
+          <span class="单位">kcal</span>
+          <p class="提示" id="目标提示"></p>
+        </div>
+        </section>
+
+        <section class="卡片 提示卡片">
+          <h2>目标怎么算出来的</h2>
+          <ul class="说明列表">
+            <li><strong>第一步</strong>：用 Mifflin-St Jeor 公式算基础代谢 BMR（男女常数不同）。</li>
+            <li><strong>第二步</strong>：乘活动系数得到每日消耗 TDEE（久坐 1.2 / 轻度 1.375 / 中度 1.55 / 高度 1.725）。</li>
+            <li><strong>第三步</strong>：按人群微调（减脂 ×0.8、增肌 ×1.1、控糖与均衡 ×1.0），结果取整到 10 kcal；低于 1200 会自动上调。</li>
+            <li>目标还会按人群供能比换算出蛋白质 / 脂肪 / 碳水三项目标克数，显示在「今日总览」。</li>
+          </ul>
+          <p class="提示">改完点「计算目标」即可，换页或刷新后依然保留。</p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="页脚">
+      <p>数据为教学用估算值，不构成医学或营养建议。</p>
+      <p class="版权">食物图片来自 <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>，遵循 Unsplash License。</p>
+    </footer>
+  </div>
+
+  <script src="数据/食谱.js"></script>
+  <script src="数据/动作.js"></script>
+  <script src="脚本.js"></script>
+</body>
+</html>

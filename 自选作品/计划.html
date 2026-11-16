@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一周计划 · 食谱搭配</title>
+  <link rel="stylesheet" href="样式.css">
+</head>
+<body data-页面="计划">
+  <aside class="侧栏">
+    <div class="侧栏品牌">
+      <a class="品牌名" href="index.html">食谱搭配</a>
+      <span class="品牌副">吃练一体 · 纯离线</span>
+    </div>
+    <div class="侧栏目标">
+      <span class="侧栏目标标签">每日目标</span>
+      <div class="侧栏目标值"><b id="侧栏目标">—</b><small> kcal</small></div>
+      <div class="侧栏今日" id="侧栏今日">今日 0 道 · 0 kcal</div>
+    </div>
+    <nav class="侧栏导航" aria-label="主导航">
+      <p class="导航组名">饮食管理</p>
+      <a class="导航项" href="index.html" data-页="总览"><span class="导航图标">🥗</span>今日总览</a>
+      <a class="导航项" href="目标.html" data-页="目标"><span class="导航图标">🎯</span>我的目标</a>
+      <a class="导航项" href="食谱.html" data-页="食谱"><span class="导航图标">📖</span>食谱专区</a>
+      <a class="导航项 选中" href="计划.html" data-页="计划" aria-current="page"><span class="导航图标">🗓</span>一周计划</a>
+      <a class="导航项" href="记录.html" data-页="记录"><span class="导航图标">🕘</span>记录与回看</a>
+      <p class="导航组名">训练</p>
+      <a class="导航项" href="训练.html" data-页="训练"><span class="导航图标">💪</span>动作库</a>
+    </nav>
+    <div class="侧栏底注">记录与目标存在本机浏览器<br>换页、刷新都不会丢</div>
+  </aside>
+  <div class="主体">
+    <header class="页面顶栏">
+      <div class="页面标题组">
+        <h1>一周计划</h1>
+        <p>按剩余额度排好连续 7 天的三餐，今天的可一键标记已吃</p>
+      </div>
+      <div class="顶栏目标">目标 <b id="顶栏目标">—</b> <small>kcal</small></div>
+    </header>
+
+    <main class="容器">
+      <section class="卡片" id="计划卡片">
+        <h2>一周食谱计划</h2>
+        <p class="提示" id="计划说明">设置每日目标后，可生成连续 7 天的食谱安排。</p>
+        <div class="计划操作">
+          <button type="button" class="主按钮" id="生成计划按钮">生成一周计划</button>
+          <button type="button" class="次按钮" id="清空计划按钮">清除计划</button>
+          <span class="提示" id="计划范围说明"></span>
+        </div>
+        <div id="计划结果"></div>
+        <p class="提示" id="偏差说明" hidden></p>
+      </section>
+
+      <section class="卡片 提示卡片">
+        <h2>计划规则</h2>
+        <ul class="说明列表">
+          <li>固定 7 天，每天最多早 / 午 / 晚三餐；每餐预算 = 当日剩余额度 ÷ 剩余餐数。</li>
+          <li>只从当前人群里挑，本周尽量不重复，同一天内绝不重复，单餐不超过当日剩余额度。</li>
+          <li>第 1 天视为今天，每餐可「标记已吃」，直接转入今日记录；下方一句话说明今天计划与实际的偏差。</li>
+          <li>计划保存在本机浏览器，可随时清除后重新生成。</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="页脚">
+      <p>数据为教学用估算值，不构成医学或营养建议。</p>
+      <p class="版权">食物图片来自 <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>，遵循 Unsplash License。</p>
+    </footer>
+  </div>
+
+  <script src="数据/食谱.js"></script>
+  <script src="数据/动作.js"></script>
+  <script src="脚本.js"></script>
+</body>
+</html>

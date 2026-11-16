@@ -1,4 +1,4 @@
-﻿/* 食谱搭配 —— 主逻辑
+/* 食谱搭配 —— 主逻辑
  * 数据源：window.食谱数据（见 数据/食谱.js）
  * 记录存储：localStorage，键名 "食谱搭配-今日记录"，值为 [{ id, 名称, ... }]
  */
@@ -87,8 +87,18 @@
   }
 
   // ============ 工具 ============
+  // 六个页面共用一份脚本，但每页只有本页的 DOM。
+  // 找不到的元素返回一个离屏「哑元素」：赋值 / 绑定 / 渲染都静默落到它身上，
+  // 不用为每个页面复制一遍逻辑，也不会因 null 抛错。
+  var 哑元素 = null;
   function 取元素(id) {
-    return document.getElementById(id);
+    var 元素 = document.getElementById(id);
+    if (元素) return 元素;
+    if (!哑元素) {
+      哑元素 = document.createElement("div");
+      哑元素.setAttribute("data-哑元素", "本页无此区块");
+    }
+    return 哑元素;
   }
 
   function 保留一位小数(x) {
@@ -873,12 +883,15 @@
 
     取元素("已摄入").textContent = 合计.卡路里;
 
-    // 顶栏常驻目标值（滚动到哪都能看到自己的额度）
-    取元素("顶栏目标").textContent = 目标值 === null ? "—" : 目标值;
+    // 顶栏与左侧导航常驻目标值，换页后仍然看得见自己的额度
+    var 目标文本 = 目标值 === null ? "—" : 目标值;
+    取元素("顶栏目标").textContent = 目标文本;
+    取元素("侧栏目标").textContent = 目标文本;
+    // 侧栏常驻今日计数：在食谱页 / 推荐页点「记录」也能立刻看到变化
+    取元素("侧栏今日").textContent = "今日 " + 记录.length + " 道 · " + 合计.卡路里 + " kcal";
 
     // 直接按 id 取，不再依赖 nextElementSibling 的 DOM 顺序。
     // 结构一改就崩，这正是第 5 周要讲的"隐式契约"问题。
-    var 目标文本 = 目标值 === null ? "—" : 目标值;
     取元素("目标对照").textContent = "/ 目标 " + 目标文本;
 
     var 填充 = 取元素("进度填充");
@@ -933,9 +946,7 @@
 
   function 刷新所有() {
     推荐偏移 = 0;   // 记录或目标变了，推荐从头排
-    渲染进度();
-    渲染记录();
-    渲染推荐();
+    渲染当前页();
   }
 
   // ============ 事件 ============
@@ -1312,119 +1323,39 @@
     内容.appendChild(网格);
   }
 
-  // ============ 主功能分区切换 ============
-  var 主分区键 = "食谱搭配-主分区";
-  var 当前主分区 = "饮食";
+  // ============ 多页面：一页一功能区 ============
+  // 每个 HTML 用 <body data-页面="…"> 标明身份；六个页面共用本脚本、
+  // 同一份样式与同一份 localStorage，换页后目标 / 记录 / 计划都还在。
+  // 单页时代的「顶栏分区切换 / 左栏标签 / 区块快速跳转」已由侧边导航取代。
+  var 本页 = "总览";
 
-  function 切换主分区(名称) {
-    当前主分区 = 名称;
-    ["饮食", "训练"].forEach(function (名) {
-      var 区 = 取元素("分区-" + 名);
-      if (区) 区.hidden = 名 !== 名称;
-    });
-    var 按钮集 = document.querySelectorAll(".主导航按钮");
-    for (var i = 0; i < 按钮集.length; i++) {
-      var 是选中 = 按钮集[i].getAttribute("data-分区") === 名称;
-      按钮集[i].classList.toggle("选中", 是选中);
-      按钮集[i].setAttribute("aria-selected", 是选中 ? "true" : "false");
-    }
-    取元素("区块导航").hidden = 名称 !== "饮食";
-    try {
-      localStorage.setItem(主分区键, 名称);
-    } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
-  }
-
-  // 饮食分区内的快速跳转：点按钮滚到对应卡片。
-  // 不做滚动联动高亮——桌面端首屏两张卡并排、左右栏也有同高卡片，
-  // 用视口位置反推"当前区块"会来回跳；点击高亮即表示刚跳到哪里。
-  // 左栏：一次只显示一个面板（今日记录 / 我的目标 / 近 7 天）。
-  // 三张卡同时堆叠时会超过视口，sticky 粘住后底部内容永远够不到。
-  function 切换左栏面板(面板id, 记住) {
-    if (左栏面板集.indexOf(面板id) === -1) 面板id = "记录卡片";
-    var 按钮集 = document.querySelectorAll(".左栏标签按钮");
-    for (var i = 0; i < 按钮集.length; i++) {
-      var 按钮 = 按钮集[i];
-      var 目标id = 按钮.getAttribute("data-面板");
-      var 选中 = 目标id === 面板id;
-      按钮.classList.toggle("选中", 选中);
-      按钮.setAttribute("aria-selected", 选中 ? "true" : "false");
-      var 面板 = document.getElementById(目标id);
-      if (面板) 面板.hidden = !选中;
-    }
-    if (记住 !== false) {
-      try {
-        localStorage.setItem(左栏面板键, 面板id);
-      } catch (e) { /* 隐私模式可能写入失败，忽略 */ }
+  function 高亮导航() {
+    var 项 = document.querySelectorAll(".导航项");
+    for (var i = 0; i < 项.length; i++) {
+      var 是 = 项[i].getAttribute("data-页") === 本页;
+      项[i].classList.toggle("选中", 是);
+      if (是) 项[i].setAttribute("aria-current", "page");
+      else 项[i].removeAttribute("aria-current");
     }
   }
 
-  function 初始化左栏() {
-    var 保存 = null;
-    try {
-      保存 = localStorage.getItem(左栏面板键);
-    } catch (e) { /* 忽略 */ }
-    // 没设目标时优先摊开「我的目标」，新用户不必自己找入口
-    var 初始 = 初始左栏面板(保存, Boolean(读目标()));
-    切换左栏面板(初始, false);
-
-    var 按钮集 = document.querySelectorAll(".左栏标签按钮");
-    for (var i = 0; i < 按钮集.length; i++) {
-      (function (按钮) {
-        按钮.addEventListener("click", function () {
-          切换左栏面板(按钮.getAttribute("data-面板"));
-        });
-      })(按钮集[i]);
+  function 渲染当前页() {
+    渲染进度();   // 每页都刷新顶栏 / 侧栏目标；本页没有进度卡时落到哑元素
+    if (本页 === "总览") {
+      渲染记录();
+      渲染推荐();
+    } else if (本页 === "目标") {
+      更新设置摘要(读目标());
+    } else if (本页 === "食谱") {
+      渲染专区();
+    } else if (本页 === "计划") {
+      渲染计划();
+    } else if (本页 === "记录") {
+      渲染记录();
+      渲染历史();
+    } else if (本页 === "训练") {
+      渲染动作();
     }
-
-    // 首屏空状态引导：一键切到设置面板并展开表单
-    取元素("去设置按钮").addEventListener("click", function () {
-      切换左栏面板("设置卡片");
-      折叠设置(false);
-      取元素("设置卡片").scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-  }
-
-  function 初始化区块导航() {
-    var 导航 = 取元素("区块导航");
-    var 按钮集 = 导航.querySelectorAll(".区块导航按钮");
-
-    for (var i = 0; i < 按钮集.length; i++) {
-      (function (按钮) {
-        var 目标id = 按钮.getAttribute("data-目标");
-        var 目标 = document.getElementById(目标id);
-        if (!目标) return;
-        按钮.addEventListener("click", function () {
-          // 左栏面板默认隐藏，跳转前先切到对应标签，否则滚过去也看不见
-          if (左栏面板集.indexOf(目标id) !== -1) {
-            切换左栏面板(目标id);
-            目标.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          } else {
-            目标.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-          for (var k = 0; k < 按钮集.length; k++) {
-            按钮集[k].classList.toggle("选中", 按钮集[k] === 按钮);
-          }
-        });
-      })(按钮集[i]);
-    }
-  }
-
-  function 初始化主分区() {
-    var 保存 = null;
-    try {
-      保存 = localStorage.getItem(主分区键);
-    } catch (e) { /* 忽略 */ }
-    if (保存 === "训练" || 保存 === "饮食") 当前主分区 = 保存;
-
-    var 按钮集 = document.querySelectorAll(".主导航按钮");
-    for (var i = 0; i < 按钮集.length; i++) {
-      (function (按钮) {
-        按钮.addEventListener("click", function () {
-          切换主分区(按钮.getAttribute("data-分区"));
-        });
-      })(按钮集[i]);
-    }
-    切换主分区(当前主分区);
   }
 
   function 初始化() {
@@ -1439,15 +1370,17 @@
       return;
     }
 
-    var 目标 = 读目标();
-    回填目标表单(目标);
+    本页 = document.body.getAttribute("data-页面") || "总览";
+    高亮导航();
 
-    // 换天结转：把昨天的记录存进历史，今天从空记录开始（近 7 天可回看）
+    var 目标 = 读目标();
+    if (本页 === "目标") 回填目标表单(目标);
+
+    // 换天结转是全站逻辑：从哪一页打开都要先把昨天的记录归档
     结转历史();
 
     if (目标) {
-      // 用当前系数重新计算并回写，保证顶部目标与"今日摄入"用的是同一个值。
-      // 否则改了 人群系数 后刷新页面，顶部按新代码算、进度栏读旧存档，两处数字会打架。
+      // 用当前系数重新计算并回写，保证顶栏目标与今日摄入用的是同一个值。
       var 结果 = 计算目标卡路里(
         目标.性别, 目标.体重, 目标.身高, 目标.年龄, 目标.活动量, 目标.人群
       );
@@ -1455,66 +1388,72 @@
         目标.目标 = 结果.目标;
         写目标(目标);
       }
-      显示目标结果(结果);
+      if (本页 === "目标") 显示目标结果(结果);
     }
 
-    // 首屏日期（今日餐盘右上角）
-    var 今 = new Date();
-    取元素("今日日期").textContent =
-      (今.getMonth() + 1) + " 月 " + 今.getDate() + " 日 · 周" +
-      "日一二三四五六".charAt(今.getDay());
+    if (本页 === "总览") {
+      var 今 = new Date();
+      取元素("今日日期").textContent =
+        (今.getMonth() + 1) + " 月 " + 今.getDate() + " 日 · 周" +
+        "日一二三四五六".charAt(今.getDay());
+      取元素("换一批按钮").addEventListener("click", function () {
+        推荐偏移 += 推荐数量;
+        渲染推荐();
+      });
+    }
 
-    // 设置卡片：已有目标则折叠为摘要，未设置则展开表单引导填写
-    更新设置摘要(目标);
-    折叠设置(Boolean(目标));
-    取元素("设置开关").addEventListener("click", function () {
-      折叠设置(!取元素("设置主体").hidden);
-    });
+    if (本页 === "目标") {
+      更新设置摘要(目标);
+      折叠设置(false);   // 设置页默认摊开表单，提交后才折叠成摘要
+      取元素("设置开关").addEventListener("click", function () {
+        折叠设置(!取元素("设置主体").hidden);
+      });
+      取元素("设置表单").addEventListener("submit", 设置目标);
+    }
 
-    取元素("设置表单").addEventListener("submit", 设置目标);
-    取元素("清空按钮").addEventListener("click", function () {
-      写记录([]);
-      刷新所有();
-    });
-    取元素("生成计划按钮").addEventListener("click", 生成计划);
-    取元素("清空计划按钮").addEventListener("click", 清除计划);
+    if (本页 === "记录") {
+      取元素("清空按钮").addEventListener("click", function () {
+        写记录([]);
+        刷新所有();
+      });
+    }
 
-    // 功能增强：换一批 / 搜索 / 排序 / 分区记忆
-    取元素("换一批按钮").addEventListener("click", function () {
-      推荐偏移 += 推荐数量;
-      渲染推荐();
-    });
-    取元素("搜索输入").addEventListener("input", function () {
-      当前搜索词 = this.value.trim();
-      渲染专区();
-    });
-    取元素("排序选择").addEventListener("change", function () {
-      当前排序 = this.value;
-      渲染专区();
-    });
-    取元素("展开专区按钮").addEventListener("click", function () {
-      专区已展开 = !专区已展开;
+    if (本页 === "食谱") {
+      取元素("搜索输入").addEventListener("input", function () {
+        当前搜索词 = this.value.trim();
+        渲染专区();
+      });
+      取元素("排序选择").addEventListener("change", function () {
+        当前排序 = this.value;
+        渲染专区();
+      });
+      取元素("展开专区按钮").addEventListener("click", function () {
+        专区已展开 = !专区已展开;
+        try {
+          localStorage.setItem(专区展开键, 专区已展开 ? "1" : "0");
+        } catch (e) { /* 隐私模式忽略 */ }
+        渲染专区();
+      });
       try {
-        localStorage.setItem(专区展开键, 专区已展开 ? "1" : "0");
-      } catch (e) { /* 隐私模式忽略 */ }
-      渲染专区();
-    });
-    try {
-      if (localStorage.getItem(食谱分区键) !== null) {
-        var 存分区 = localStorage.getItem(食谱分区键);
-        if (合法分区.indexOf(存分区) !== -1) 当前分区 = 存分区;
-      }
-      专区已展开 = localStorage.getItem(专区展开键) === "1";
-    } catch (e) { /* 忽略 */ }
+        if (localStorage.getItem(食谱分区键) !== null) {
+          var 存分区 = localStorage.getItem(食谱分区键);
+          if (合法分区.indexOf(存分区) !== -1) 当前分区 = 存分区;
+        }
+        专区已展开 = localStorage.getItem(专区展开键) === "1";
+      } catch (e) { /* 忽略 */ }
+    }
 
-    渲染专区();
-    渲染计划();
-    渲染动作();
-    渲染历史();
-    刷新所有();
-    初始化左栏();
-    初始化主分区();
-    初始化区块导航();
+    if (本页 === "计划") {
+      取元素("生成计划按钮").addEventListener("click", 生成计划);
+      取元素("清空计划按钮").addEventListener("click", 清除计划);
+    }
+
+    渲染当前页();
+
+    // 同一浏览器开着多个页面时，另一页改了记录 / 目标，本页跟着刷新
+    window.addEventListener("storage", function (事件) {
+      if (!事件.key || 事件.key.indexOf("食谱搭配-") === 0) 渲染当前页();
+    });
   }
 
   document.addEventListener("DOMContentLoaded", 初始化);
