@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 房间可行性验证 · 零依赖</title>
+<style>
+  body { margin:0; padding:24px; background:#F4F1E8; color:#2C2C2A;
+         font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
+  h1 { font-size:20px; font-weight:500; margin:0 0 6px; }
+  .说明 { font-size:13px; color:#6F6D64; line-height:1.7; margin:0 0 16px; }
+  .房间容器 { position:relative; width:800px; height:520px; border-radius:14px;
+              overflow:hidden; background:#EAF3DE; border:1px solid #D6E4C2; }
+  canvas { display:block; width:800px; height:520px; }
+  .纸片人 { position:absolute; left:50%; bottom:96px; width:150px; height:250px;
+            margin-left:-75px; pointer-events:none; transform-origin:50% 100%;
+            animation:呼吸 3.2s ease-in-out infinite; }
+  @keyframes 呼吸 { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.025)} }
+  .槽位层 { position:absolute; inset:0; pointer-events:none; }
+  .槽位 { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px;
+          border-radius:50%; border:1.5px solid rgba(39,80,10,.55);
+          background:rgba(255,255,255,.78); color:#27500A; font-size:12px;
+          line-height:27px; text-align:center; cursor:pointer; pointer-events:auto; }
+  .槽位.关 { background:rgba(255,255,255,.4); color:#9A988F; border-style:dashed; }
+  .控制 { margin-top:14px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  button { font:inherit; font-size:13px; padding:6px 12px; border-radius:9px;
+           border:1px solid #CFCBBB; background:#fff; color:#2C2C2A; cursor:pointer; }
+  button:hover { border-color:#639922; }
+  .自检 { margin-top:14px; padding:12px 14px; border-radius:9px; background:#fff;
+          border:1px solid #E5E2D5; font-size:12px; line-height:1.9; }
+  .自检 b { font-weight:500; }
+  .好 { color:#3B6D11; } .坏 { color:#B23A3A; }
+  #降级房间 { display:none; position:absolute; inset:0; padding:60px;
+              background:#EAF3DE; font-size:13px; color:#5F5E5A; }
+  #降级房间 .地 { width:420px; height:260px; margin:40px auto; background:#D9C9A8;
+                  transform:perspective(700px) rotateX(56deg) rotateZ(-32deg);
+                  border:2px solid #C0DD97; }
+</style>
+</head>
+<body>
+
+<h1>3D 房间可行性验证</h1>
+<p class="说明">
+  目的：证明「人物 2D + 房间 3D」在 <b>file:// 双击打开、不引入任何第三方库、不联网</b> 的条件下能跑。<br>
+  本页用浏览器原生 WebGL1 手写渲染器（约 200 行）；拖动房间可转视角；点圆形槽位可摆放/收起家具。
+</p>
+
+<div class="房间容器" id="房间容器">
+  <canvas id="房间画布" width="800" height="520"></canvas>
+
+  <!-- 2D 人物：DOM 叠加层，内联 SVG，不进 WebGL 纹理 -->
+  <div class="纸片人" aria-hidden="true">
+    <svg viewBox="0 0 200 320" width="150" height="240">
+      <ellipse cx="100" cy="310" rx="42" ry="8" fill="rgba(39,80,10,.16)"/>
+      <rect x="76" y="196" width="20" height="100" rx="9" fill="#4A6B8A"/>
+      <rect x="106" y="196" width="20" height="100" rx="9" fill="#4A6B8A"/>
+      <rect x="70" y="292" width="32" height="16" rx="7" fill="#3B3B38"/>
+      <rect x="102" y="292" width="32" height="16" rx="7" fill="#3B3B38"/>
+      <rect x="64" y="112" width="72" height="92" rx="18" fill="#FFFFFF" stroke="#D6E4C2"/>
+      <rect x="58" y="120" width="14" height="66" rx="7" fill="#F0D5B8"/>
+      <rect x="128" y="120" width="14" height="66" rx="7" fill="#F0D5B8"/>
+      <rect x="88" y="100" width="24" height="18" rx="6" fill="#F0D5B8"/>
+      <circle cx="100" cy="70" r="34" fill="#F5DCC4"/>
+      <path d="M66 66 Q66 28 100 28 Q134 28 134 66 Q120 48 100 48 Q80 48 66 66Z" fill="#4A3A30"/>
+      <circle cx="88" cy="70" r="3.2" fill="#3B302A"/>
+      <circle cx="112" cy="70" r="3.2" fill="#3B302A"/>
+      <path d="M92 88 Q100 95 108 88" fill="none" stroke="#B4756B" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="80" cy="82" r="5" fill="rgba(212,120,110,.28)"/>
+      <circle cx="120" cy="82" r="5" fill="rgba(212,120,110,.28)"/>
+    </svg>
+  </div>
+
+  <div class="槽位层" id="槽位层"></div>
+
+  <div id="降级房间">
+    <b>WebGL 不可用</b>，已自动降级为 2.5D 等距房间。
+    <div class="地"></div>
+    打卡 / 经验 / 捏脸 / 摆家具全部照常 —— 3D 只是渲染层。
+  </div>
+</div>
+
+<div class="控制">
+  <button type="button" id="复位按钮">视角复位</button>
+  <button type="button" id="全摆按钮">摆满 6 件</button>
+  <button type="button" id="清空按钮">全部收起</button>
+  <button type="button" id="换色按钮">换地板 / 墙纸</button>
+  <span style="font-size:12px;color:#6F6D64;margin-left:6px">拖动房间可转视角（限制 ±20°）</span>
+</div>
+
+<div class="自检" id="自检">正在初始化…</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var 画布 = document.getElementById("房间画布");
+  var 自检 = document.getElementById("自检");
+  var 槽位层 = document.getElementById("槽位层");
+  var 结果 = { 上下文: false, 着色器: false, 几何: false, 槽位: 0, 错误: "" };
+
+  // ---------- 矩阵（列主序，WebGL 标准） ----------
+  function 矩阵乘(a, b) {
+    var o = new Float32Array(16);
+    for (var c = 0; c < 4; c++) for (var r = 0; r < 4; r++) {
+      o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1]
+                   + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+    }
+    return o;
+  }
+  function 乘向量(m, v) {
+    return [
+      m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3],
+      m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3],
+      m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3],
+      m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3]
+    ];
+  }
+  function 透视(视角, 宽高比, 近, 远) {
+    var f = 1 / Math.tan(视角 / 2), nf = 1 / (近 - 远);
+    return new Float32Array([
+      f / 宽高比, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (远 + 近) * nf, -1,
+      0, 0, 2 * 远 * 近 * nf, 0
+    ]);
+  }
+  function 减(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function 叉(a, b) {
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  }
+  function 点(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function 归一(a) {
+    var n = Math.sqrt(点(a, a)) || 1;
+    return [a[0] / n, a[1] / n, a[2] / n];
+  }
+  function 观察(眼, 心, 上) {
+    var z = 归一(减(眼, 心)), x = 归一(叉(上, z)), y = 叉(z, x);
+    return new Float32Array([
+      x[0], y[0], z[0], 0,
+      x[1], y[1], z[1], 0,
+      x[2], y[2], z[2], 0,
+      -点(x, 眼), -点(y, 眼), -点(z, 眼), 1
+    ]);
+  }
+  function 模型(x, y, z, sx, sy, sz, ry) {
+    var c = Math.cos(ry || 0), s = Math.sin(ry || 0);
+    return new Float32Array([
+      c * sx, 0, -s * sx, 0,
+      0, sy, 0, 0,
+      s * sz, 0, c * sz, 0,
+      x, y, z, 1
+    ]);
+  }
+
+  // ---------- 立方体几何：24 顶点（每面独立法线）+ 36 索引 ----------
+  var 面 = [
+    { 法: [1, 0, 0], 点: [[.5,-.5,-.5],[.5,-.5,.5],[.5,.5,.5],[.5,.5,-.5]] },
+    { 法: [-1, 0, 0], 点: [[-.5,-.5,.5],[-.5,-.5,-.5],[-.5,.5,-.5],[-.5,.5,.5]] },
+    { 法: [0, 1, 0], 点: [[-.5,.5,-.5],[.5,.5,-.5],[.5,.5,.5],[-.5,.5,.5]] },
+    { 法: [0,-1, 0], 点: [[-.5,-.5,.5],[.5,-.5,.5],[.5,-.5,-.5],[-.5,-.5,-.5]] },
+    { 法: [0, 0, 1], 点: [[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]] },
+    { 法: [0, 0,-1], 点: [[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]] }
+  ];
+  var 顶点 = [], 索引 = [];
+  面.forEach(function (f, i) {
+    f.点.forEach(function (p) { 顶点.push(p[0], p[1], p[2], f.法[0], f.法[1], f.法[2]); });
+    索引.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3);
+  });
+
+  // ---------- 着色器（内联字符串，不从网络加载） ----------
+  // 注意：项目约定 JS 变量/函数全中文，但 GLSL 标识符只允许 ASCII。
+  // 这两份源码里的 attribute / uniform / varying / 局部变量一律用 ASCII，
+  // 这是全项目唯一必须"破例用英文"的地方（已由无头浏览器验证）。
+  var 顶点源码 = [
+    "attribute vec3 aPosition;", "attribute vec3 aNormal;",
+    "uniform mat4 uProj;", "uniform mat4 uView;", "uniform mat4 uModel;",
+    "varying vec3 vNormal;",
+    "void main(){ vNormal = (uModel * vec4(aNormal, 0.0)).xyz;",
+    " gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0); }"
+  ].join("\n");
+  var 片元源码 = [
+    "precision mediump float;", "uniform vec3 uColor;", "varying vec3 vNormal;",
+    "void main(){ vec3 n = normalize(vNormal);",
+    " vec3 lightDir = normalize(vec3(0.45, 1.0, 0.75));",
+    " float diffuse = max(dot(n, lightDir), 0.0);",
+    " gl_FragColor = vec4(uColor * (0.74 + 0.26 * diffuse), 1.0); }"
+  ].join("\n");
+
+  function 编译(gl, 类型, 源码) {
+    var s = gl.createShader(类型);
+    gl.shaderSource(s, 源码); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(s));
+    }
+    return s;
+  }
+  function 颜色(十六进制) {
+    return [parseInt(十六进制.slice(1, 3), 16) / 255,
+            parseInt(十六进制.slice(3, 5), 16) / 255,
+            parseInt(十六进制.slice(5, 7), 16) / 255];
+  }
+
+  // ---------- 场景数据（与渲染方式无关，正式版存 localStorage） ----------
+  var 配色组 = [
+    { 地板: "#D9C9A8", 后墙: "#EFE9DC", 侧墙: "#E5DECE", 地毯: "#C8D9B0" },
+    { 地板: "#C9B79C", 后墙: "#E8EEE4", 侧墙: "#DDE6D9", 地毯: "#E7C9A8" }
+  ];
+  var 配色序号 = 0;
+  var 槽位坐标 = [
+    { x: -1.15, z: 0.10, 名: "木桌" },
+    { x:  1.55, z: -1.40, 名: "绿植" },
+    { x:  0.00, z: 0.70, 名: "地毯" },
+    { x: -2.15, z: -2.15, 名: "书架" },
+    { x:  1.15, z: 1.05, 名: "小沙发" },
+    { x:  2.30, z: -0.55, 名: "落地灯" }
+  ];
+  var 显示 = [true, true, true, true, true, true];
+
+  // 每件家具 = 一组盒子（纯程序化几何，零美术资产）
+  function 盒子(x, y, z, sx, sy, sz, 色, ry) {
+    return { x: x, y: y, z: z, sx: sx, sy: sy, sz: sz, 色: 色, ry: ry || 0 };
+  }
+  function 造家具(种类, x, z, 配色) {
+    var 木 = "#A9804F", 深木 = "#8A6640", 叶 = "#5E8C3A";
+    if (种类 === 0) {
+      var 桌 = [盒子(x, 0.62, z, 1.30, 0.10, 0.90, 木)];
+      [-0.52, 0.52].forEach(function (dx) {
+        [-0.32, 0.32].forEach(function (dz) {
+          桌.push(盒子(x + dx, 0.30, z + dz, 0.10, 0.60, 0.10, 深木));
+        });
+      });
+      return 桌;
+    }
+    if (种类 === 1) {
+      return [盒子(x, 0.22, z, 0.46, 0.44, 0.46, "#C77B54"),
+              盒子(x, 0.72, z, 0.13, 0.72, 0.30, 叶, 0.5),
+              盒子(x, 0.72, z, 0.13, 0.72, 0.30, 叶, 1.6),
+              盒子(x, 0.72, z, 0.13, 0.72, 0.30, 叶, 2.7)];
+    }
+    if (种类 === 2) return [盒子(x, 0.035, z, 1.90, 0.02, 1.30, 配色.地毯)];
+    if (种类 === 3) {
+      var 架 = [盒子(x - 0.58, 0.90, z, 0.10, 1.80, 0.52, 深木),
+                盒子(x + 0.58, 0.90, z, 0.10, 1.80, 0.52, 深木)];
+      [0.25, 0.90, 1.55].forEach(function (y) { 架.push(盒子(x, y, z, 1.26, 0.08, 0.52, 木)); });
+      return 架;
+    }
+    if (种类 === 4) {
+      return [盒子(x, 0.34, z, 1.25, 0.34, 0.72, "#7C9B6B"),
+              盒子(x, 0.72, z - 0.28, 1.25, 0.72, 0.16, "#6E8B5E"),
+              盒子(x - 0.55, 0.50, z, 0.16, 0.46, 0.72, "#6E8B5E"),
+              盒子(x + 0.55, 0.50, z, 0.16, 0.46, 0.72, "#6E8B5E")];
+    }
+    return [盒子(x, 0.90, z, 0.09, 1.80, 0.09, "#8A8A80"),
+            盒子(x, 1.86, z, 0.52, 0.36, 0.52, "#F0D79A")];
+  }
+
+  // ---------- 初始化 WebGL ----------
+  var gl = null;
+  try {
+    gl = 画布.getContext("webgl", { antialias: true, alpha: false })
+      || 画布.getContext("experimental-webgl", { antialias: true, alpha: false });
+  } catch (e) { 结果.错误 = e.message; }
+
+  if (!gl) {
+    画布.style.display = "none";
+    槽位层.style.display = "none";
+    document.getElementById("降级房间").style.display = "block";
+    自检.innerHTML = "<b>降级路径已验证</b>：WebGL 不可用 → 2.5D 房间 + 文字提示，" +
+                     "玩法不受影响。<br>错误：" + (结果.错误 || "浏览器未提供 WebGL 上下文");
+    return;
+  }
+  结果.上下文 = true;
+
+  var 程序, 位置属性, 法线属性, u投影, u观察, u模型, u颜色, 顶点缓存, 索引缓存;
+  try {
+    程序 = gl.createProgram();
+    gl.attachShader(程序, 编译(gl, gl.VERTEX_SHADER, 顶点源码));
+    gl.attachShader(程序, 编译(gl, gl.FRAGMENT_SHADER, 片元源码));
+    gl.linkProgram(程序);
+    if (!gl.getProgramParameter(程序, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(程序));
+    gl.useProgram(程序);
+    结果.着色器 = true;
+
+    位置属性 = gl.getAttribLocation(程序, "aPosition");
+    法线属性 = gl.getAttribLocation(程序, "aNormal");
+    u投影 = gl.getUniformLocation(程序, "uProj");
+    u观察 = gl.getUniformLocation(程序, "uView");
+    u模型 = gl.getUniformLocation(程序, "uModel");
+    u颜色 = gl.getUniformLocation(程序, "uColor");
+
+    顶点缓存 = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, 顶点缓存);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(顶点), gl.STATIC_DRAW);
+    索引缓存 = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, 索引缓存);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(索引), gl.STATIC_DRAW);
+    结果.几何 = 顶点.length / 6 + " 顶点 / " + 索引.length / 3 + " 三角形";
+
+    gl.enableVertexAttribArray(位置属性);
+    gl.vertexAttribPointer(位置属性, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(法线属性);
+    gl.vertexAttribPointer(法线属性, 3, gl.FLOAT, false, 24, 12);
+    gl.enable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, 画布.width, 画布.height);
+  } catch (e) {
+    自检.innerHTML = '<span class="坏">着色器初始化失败：' + e.message + "</span>";
+    return;
+  }
+
+  var 偏航 = 0;
+  var 投影矩阵 = 透视(40 * Math.PI / 180, 画布.width / 画布.height, 0.1, 60);
+
+  function 画盒子(盒, 视图矩阵) {
+    gl.uniformMatrix4fv(u模型, false, 模型(盒.x, 盒.y, 盒.z, 盒.sx, 盒.sy, 盒.sz, 盒.ry));
+    gl.uniformMatrix4fv(u观察, false, 视图矩阵);
+    gl.uniform3fv(u颜色, 颜色(盒.色));
+    gl.drawElements(gl.TRIANGLES, 索引.length, gl.UNSIGNED_SHORT, 0);
+  }
+
+  function 画一个(盒列表, 视图矩阵) { 盒列表.forEach(function (盒) { 画盒子(盒, 视图矩阵); }); }
+
+  function 视图() {
+    var 基础X = 3.8, 基础Z = 5.6;
+    var 眼 = [基础X * Math.cos(偏航) + 基础Z * Math.sin(偏航), 2.80,
+              -基础X * Math.sin(偏航) + 基础Z * Math.cos(偏航)];
+    return 观察(眼, [0, 0.82, 0], [0, 1, 0]);
+  }
+
+  // 世界坐标 → 屏幕像素，用于摆放 DOM 槽位按钮（不做射线拾取）
+  function 投影到屏幕(视图矩阵, x, y, z) {
+    var vp = 矩阵乘(投影矩阵, 视图矩阵);
+    var c = 乘向量(vp, [x, y, z, 1]);
+    if (c[3] <= 0) return null;
+    return { x: (c[0] / c[3] * 0.5 + 0.5) * 画布.width,
+             y: (1 - (c[1] / c[3] * 0.5 + 0.5)) * 画布.height };
+  }
+
+  // ---------- 槽位按钮 ----------
+  var 槽位按钮 = 槽位坐标.map(function (槽, i) {
+    var b = document.createElement("div");
+    b.className = "槽位";
+    b.textContent = String(i + 1);
+    b.title = "槽位 " + (i + 1) + " · " + 槽.名;
+    b.addEventListener("click", function () { 显示[i] = !显示[i]; 重绘(); });
+    槽位层.appendChild(b);
+    return b;
+  });
+
+  function 重绘() {
+    var 配色 = 配色组[配色序号];
+    var 视图矩阵 = 视图();
+    gl.clearColor(0.93, 0.95, 0.88, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.uniformMatrix4fv(u投影, false, 投影矩阵);
+
+    画一个([
+      盒子(0, -0.06, 0, 8.0, 0.12, 8.0, 配色.地板),
+      盒子(0, 1.50, -3.0, 8.0, 3.0, 0.12, 配色.后墙),
+      盒子(-3.0, 1.50, 0, 0.12, 3.0, 6.0, 配色.侧墙),
+      盒子(0, 0.012, 0.30, 3.60, 0.015, 2.60, 配色.地毯)
+    ], 视图矩阵);
+
+    槽位坐标.forEach(function (槽, i) {
+      if (显示[i]) 画一个(造家具(i, 槽.x, 槽.z, 配色), 视图矩阵);
+      var p = 投影到屏幕(视图矩阵, 槽.x, 1.25, 槽.z);
+      var b = 槽位按钮[i];
+      if (p) {
+        b.style.left = Math.round(p.x) + "px";
+        b.style.top = Math.round(p.y) + "px";
+        b.style.display = "block";
+      } else { b.style.display = "none"; }
+      b.className = 显示[i] ? "槽位" : "槽位 关";
+    });
+
+    结果.槽位 = 显示.filter(Boolean).length;
+    自检.innerHTML =
+      '<b>自检结果</b>（全部在 file:// 下完成，无任何网络请求）<br>' +
+      '· WebGL1 上下文：<span class="好">创建成功</span><br>' +
+      '· 着色器编译链接：<span class="好">成功</span>（GLSL 内联在 JS 字符串里）<br>' +
+      '· 立方体几何：<span class="好">' + 结果.几何 + '</span>，程序化生成，无 glTF / 无贴图<br>' +
+      '· 房间盒子数：' + (4 + 槽位坐标.reduce(function (n, 槽, i) {
+        return n + (显示[i] ? 造家具(i, 槽.x, 槽.z, 配色组[配色序号]).length : 0);
+      }, 0)) + ' 个（地板 + 两面墙 + 地毯 + 家具）<br>' +
+      '· DOM 槽位按钮：' + 结果.槽位 + ' / 6 可见，随视角投影移动，不需要射线拾取<br>' +
+      '· 2D 人物：DOM 叠加的内联 SVG，<b>不进 WebGL 纹理</b>，换装即时生效<br>' +
+      '· 依赖：<span class="好">零</span>（无 npm / 无 CDN / 无 three.js / 无外链图片）';
+  }
+
+  // ---------- 交互 ----------
+  var 拖动中 = false, 上次X = 0;
+  画布.addEventListener("pointerdown", function (e) {
+    拖动中 = true; 上次X = e.clientX; 画布.setPointerCapture(e.pointerId);
+  });
+  画布.addEventListener("pointermove", function (e) {
+    if (!拖动中) return;
+    偏航 = Math.max(-0.35, Math.min(0.35, 偏航 + (e.clientX - 上次X) * 0.005));
+    上次X = e.clientX; 重绘();
+  });
+  画布.addEventListener("pointerup", function () { 拖动中 = false; });
+  画布.addEventListener("pointercancel", function () { 拖动中 = false; });
+
+  document.getElementById("复位按钮").addEventListener("click", function () { 偏航 = 0; 重绘(); });
+  document.getElementById("全摆按钮").addEventListener("click", function () {
+    显示 = [true, true, true, true, true, true]; 重绘();
+  });
+  document.getElementById("清空按钮").addEventListener("click", function () {
+    显示 = [false, false, false, false, false, false]; 重绘();
+  });
+  document.getElementById("换色按钮").addEventListener("click", function () {
+    配色序号 = (配色序号 + 1) % 配色组.length; 重绘();
+  });
+
+  重绘();
+  window.验证结果 = 结果;
+  console.log("3D 房间验证：", 结果);
+})();
+</script>
+</body>
+</html>
