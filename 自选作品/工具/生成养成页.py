@@ -51,7 +51,7 @@ def 装配(js):
   async function 启动(选项) {
     var t0 = performance.now();
     染 = (选项 && 选项.染色) || {};
-    if (!window.房间模型 || !window.角色模型) throw new Error("模型数据未加载");
+    if (!window.角色模型) throw new Error("模型数据未加载");
     if (!document.createElement("canvas").getContext("webgl2")) throw new Error("NO_WEBGL2");
 
     var 画 = 画布.getContext("webgl2", { antialias: true, alpha: true });
@@ -171,10 +171,38 @@ def 装配(js):
       画.uniform1f(uP[2].uOnShoes, 染.鞋 ? 1 : 0);''')
 
     # ---------- 舞台站位：家具与玩偶整体右移，填掉右下角的空地 ----------
+    # 家具是 L 形摆放的角落场景：书桌/沙发那排贴着「后墙」，书架/挂墙搁板那排贴着
+    # 「左墙」。所以要把模型自己的角对准房间的角 —— 模型包围盒 x[-0.5,0.5] z[-0.35,0.35]，
+    # 让 -x 边压在左墙(x=-2.05)、-z 边压在后墙(z=-2.05)：
+    #   家位.x = -2.05 + 0.5*缩放，家位.z = -2.05 + 0.35*缩放
+    # 之前写成 (0.22, -1.38)：整组飘在房间中间，挂墙搁板背后没有墙（看着像悬空），
+    # 而且后沿 -2.20 已经捅进后墙 0.15。
     js = 改(js, '''    var 偶位 = { x: 0.52, y: 0.02, z: -0.15, 缩放: 0.95, 朝向: -0.72 };
     var 家位 = { x: -0.05, y: 0.0, z: -1.45, 缩放: 2.30, 朝向: 0 };''',
-            '''    var 偶位 = { x: 0.34, y: 0.02, z: -0.26, 缩放: 0.98, 朝向: -0.72 };
-    var 家位 = { x: 0.22, y: 0.0, z: -1.38, 缩放: 2.34, 朝向: 0 };''')
+            '''    var 偶位 = { x: 0.34, y: 0.02, z: -0.26, 缩放: 0.98, 朝向: -0.72 };''')
+
+    # ---------- 陈设表：一件家具一个模型，逐件摆位 ----------
+    # 之前是 Tripo 导出的「整个小客厅」融合网格：所有家具焊成一块，挪不动也没有槽位；
+    # 书桌上方的搁板在模型里本来就悬在半空（背后没墙，怎么挪都救不回来）。
+    # 换成一件一个模型后，位置/朝向/大小都能单独调，以后做「换家具」只是改这张表。
+    #
+    # 高 = 这件家具想要的高度，单位与玩偶一致（玩偶站高 1.0 ≈ 1.65m）：
+    # 0.46 ≈ 76cm 桌面、0.95 ≈ 1.55m 书架、1.05 落地灯 —— 不能再小了，否则比人还矮一截。
+    # 表必须在「装载家具」之前就有（装载时按表逐件建缓存），所以放在启动开头。
+    js = 改(js, '''    if (!window.角色模型) throw new Error("模型数据未加载");''',
+            '''    if (!window.角色模型) throw new Error("模型数据未加载");
+
+    // 靠墙：后墙 z≈-2.05、左墙 x≈-2.05；x/z 是这件的中心落点，y 缺省为 0（落地）
+    var 陈设 = [
+      { 名: "书架",   x: -1.66, z: -1.58, 朝向: 0.50,    高: 1.30 },
+      { 名: "木桌",   x:  0.05, z:  0.30, 朝向: 1.15,    高: 0.55 },
+      { 名: "椅子",   x:  1.18, z: -0.22, 朝向: -2.2,    高: 0.70 },
+      { 名: "矮架",   x: -1.92, z:  0.38, 朝向: 1.5708,  高: 0.78 },
+      { 名: "落地灯", x:  1.78, z: -1.58, 朝向: 0.6,     高: 1.40 },
+      { 名: "盆栽",   x:  1.55, z:  0.95, 朝向: 0,       高: 0.55 },
+      { 名: "坐垫堆", x: -0.62, z:  0.62, 朝向: -0.4,    高: 0.24 },
+      { 名: "便当盒", x:  0.06, z:  0.24, 朝向: 0.9,     高: 0.15, y: 0.34 }
+    ];''')
     js = 改(js, '''      眼目标: [0, 0.82, -0.35]''', '''      眼目标: [0.10, 0.84, -0.32]''')
 
     # ---------- 取景：宽画布下把镜头推近，避免两侧大片空地 ----------
@@ -190,6 +218,119 @@ def 装配(js):
       var 眼 = [场景.眼目标[0] + 距*cp*Math.sin(场景.偏航),
                 场景.眼目标[1] + 距*Math.sin(场景.俯仰),
                 场景.眼目标[2] + 距*cp*Math.cos(场景.偏航)];''')
+
+    # ---------- 家具：从「一整个小客厅」改成一件一个模型 ----------
+    js = 改(js, '''    // ---- 家具 ----
+    var 家 = 解析GLB(解b64(房间模型.b64));
+    var 家数 = 家.位置.length / 3;
+    var 家交错 = new Float32Array(家数 * 8);
+    for (var i = 0; i < 家数; i++) {
+      家交错[i*8]=家.位置[i*3]; 家交错[i*8+1]=家.位置[i*3+1]; 家交错[i*8+2]=家.位置[i*3+2];
+      家交错[i*8+3]=家.法线[i*3]; 家交错[i*8+4]=家.法线[i*3+1]; 家交错[i*8+5]=家.法线[i*3+2];
+      家交错[i*8+6]=家.uv[i*2]; 家交错[i*8+7]=家.uv[i*2+1];
+    }
+    var 家vb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, 家vb);
+    画.bufferData(画.ARRAY_BUFFER, 家交错, 画.STATIC_DRAW);
+    var 家ib = 画.createBuffer(); 画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 家ib);
+    画.bufferData(画.ELEMENT_ARRAY_BUFFER, 家.索引, 画.STATIC_DRAW);
+    var 家纹理 = 画.createTexture();
+    var 家位图 = await createImageBitmap(new Blob([家.图字节], { type: 家.图类型 }));
+    画.bindTexture(画.TEXTURE_2D, 家纹理);
+    画.pixelStorei(画.UNPACK_FLIP_Y_WEBGL, false);
+    画.texImage2D(画.TEXTURE_2D, 0, 画.RGB, 画.RGB, 画.UNSIGNED_BYTE, 家位图);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MIN_FILTER, 画.LINEAR_MIPMAP_LINEAR);
+    画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MAG_FILTER, 画.LINEAR);
+    画.generateMipmap(画.TEXTURE_2D);
+    记("家具：" + 房间模型.三角形数.toLocaleString() + " 三角形，贴图 " + 家位图.width + "²");''',
+            '''    // ---- 家具：一件一个模型，各建一份顶点/索引/贴图缓存 ----
+    var 件 = {};
+    async function 装一件(项) {
+      var 数据 = window[项.名];
+      if (!数据) { 记("缺少模型数据：" + 项.名); return; }
+      var 模 = 解析GLB(解b64(数据.b64));
+      var 数 = 模.位置.length / 3, 交错 = new Float32Array(数 * 8);
+      for (var i = 0; i < 数; i++) {
+        交错[i*8]=模.位置[i*3]; 交错[i*8+1]=模.位置[i*3+1]; 交错[i*8+2]=模.位置[i*3+2];
+        交错[i*8+3]=模.法线[i*3]; 交错[i*8+4]=模.法线[i*3+1]; 交错[i*8+5]=模.法线[i*3+2];
+        交错[i*8+6]=模.uv[i*2]; 交错[i*8+7]=模.uv[i*2+1];
+      }
+      var vb = 画.createBuffer(); 画.bindBuffer(画.ARRAY_BUFFER, vb);
+      画.bufferData(画.ARRAY_BUFFER, 交错, 画.STATIC_DRAW);
+      var ib = 画.createBuffer(); 画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, ib);
+      画.bufferData(画.ELEMENT_ARRAY_BUFFER, 模.索引, 画.STATIC_DRAW);
+      var 纹理 = 画.createTexture(); 画.bindTexture(画.TEXTURE_2D, 纹理);
+      画.pixelStorei(画.UNPACK_FLIP_Y_WEBGL, false);
+      if (数据.有贴图) {
+        var 位图 = await createImageBitmap(new Blob([模.图字节], { type: 模.图类型 }));
+        画.texImage2D(画.TEXTURE_2D, 0, 画.RGB, 画.RGB, 画.UNSIGNED_BYTE, 位图);
+        画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MIN_FILTER, 画.LINEAR_MIPMAP_LINEAR);
+        画.generateMipmap(画.TEXTURE_2D);
+      } else {
+        // 无贴图的模型（落地灯）：1×1 暖白，靠光照出体积
+        画.texImage2D(画.TEXTURE_2D, 0, 画.RGB, 1, 1, 0, 画.RGB, 画.UNSIGNED_BYTE,
+          new Uint8Array([201, 186, 164]));
+        画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MIN_FILTER, 画.LINEAR);
+      }
+      画.texParameteri(画.TEXTURE_2D, 画.TEXTURE_MAG_FILTER, 画.LINEAR);
+      var 盒 = 数据.包围盒 || { min: [0, 0, 0], max: [1, 1, 1] };
+      件[项.名] = { vb: vb, ib: ib, 数: 模.索引.length, 纹理: 纹理,
+        高: Math.max(0.001, 盒.max[1] - 盒.min[1]),
+        大: (模.索引 instanceof Uint32Array) ? 画.UNSIGNED_INT : 画.UNSIGNED_SHORT };
+    }
+    for (var k0 = 0; k0 < 陈设.length; k0++) await 装一件(陈设[k0]);
+    记("家具：" + Object.keys(件).length + " 件独立模型");''')
+
+    # ---------- 绘制：逐件套各自的变换 ----------
+    js = 改(js, '''      // 2) 家具
+      画.useProgram(贴图);
+      画.uniformMatrix4fv(uP[1].uProj, false, 投影);
+      画.uniformMatrix4fv(uP[1].uView, false, 视图);
+      画.uniformMatrix4fv(uP[1].uModel, false,
+        乘(乘(平移(家位.x, 家位.y, 家位.z), 绕Y(家位.朝向)), 缩放(家位.缩放, 家位.缩放, 家位.缩放)));
+      画.uniformMatrix3fv(uP[1].uNormalMat, false, 法线阵(家位.缩放, 家位.缩放, 家位.缩放, 家位.朝向));
+      画.bindBuffer(画.ARRAY_BUFFER, 家vb);
+      var aP1 = 画.getAttribLocation(贴图, "aPosition"), aN1 = 画.getAttribLocation(贴图, "aNormal"),
+          aU1 = 画.getAttribLocation(贴图, "aUV");
+      画.enableVertexAttribArray(aP1); 画.enableVertexAttribArray(aN1); 画.enableVertexAttribArray(aU1);
+      画.vertexAttribPointer(aP1, 3, 画.FLOAT, false, 32, 0);
+      画.vertexAttribPointer(aN1, 3, 画.FLOAT, false, 32, 12);
+      画.vertexAttribPointer(aU1, 2, 画.FLOAT, false, 32, 24);
+      画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 家ib);
+      画.uniform1i(uP[1].uTex, 0);
+      画.activeTexture(画.TEXTURE0); 画.bindTexture(画.TEXTURE_2D, 家纹理);
+      画.drawElements(画.TRIANGLES, 家.索引.length, 画.UNSIGNED_INT, 0);''',
+            '''      // 2) 家具（逐件：各自的位置 / 朝向 / 大小）
+      画.useProgram(贴图);
+      画.uniformMatrix4fv(uP[1].uProj, false, 投影);
+      画.uniformMatrix4fv(uP[1].uView, false, 视图);
+      var aP1 = 画.getAttribLocation(贴图, "aPosition"), aN1 = 画.getAttribLocation(贴图, "aNormal"),
+          aU1 = 画.getAttribLocation(贴图, "aUV");
+      画.enableVertexAttribArray(aP1); 画.enableVertexAttribArray(aN1); 画.enableVertexAttribArray(aU1);
+      画.uniform1i(uP[1].uTex, 0);
+      画.activeTexture(画.TEXTURE0);
+      for (var k = 0; k < 陈设.length; k++) {
+        var 项 = 陈设[k], 网 = 件[项.名];
+        if (!网) continue;
+        var 缩 = 项.高 / 网.高;        // 表里给「想要多高」，按模型自身高度反算缩放
+        画.bindBuffer(画.ARRAY_BUFFER, 网.vb);
+        画.vertexAttribPointer(aP1, 3, 画.FLOAT, false, 32, 0);
+        画.vertexAttribPointer(aN1, 3, 画.FLOAT, false, 32, 12);
+        画.vertexAttribPointer(aU1, 2, 画.FLOAT, false, 32, 24);
+        画.bindBuffer(画.ELEMENT_ARRAY_BUFFER, 网.ib);
+        画.bindTexture(画.TEXTURE_2D, 网.纹理);
+        画.uniformMatrix4fv(uP[1].uModel, false,
+          乘(乘(平移(项.x, 项.y || 0, 项.z), 绕Y(项.朝向 || 0)), 缩放(缩, 缩, 缩)));
+        画.uniformMatrix3fv(uP[1].uNormalMat, false, 法线阵(缩, 缩, 缩, 项.朝向 || 0));
+        画.drawElements(画.TRIANGLES, 网.数, 网.大, 0);
+      }''')
+
+    # ---------- 解析GLB：允许无贴图模型（落地灯没有贴图） ----------
+    js = 改(js, '''    var ibv = g.bufferViews[g.images[0].bufferView], 图起 = ibv.byteOffset || 0;''',
+            '''    var 图0 = g.images && g.images[0] ? g.images[0] : null;
+    var ibv = 图0 ? g.bufferViews[图0.bufferView] : null, 图起 = ibv ? (ibv.byteOffset || 0) : 0;''')
+    js = 改(js, '''               图字节: bin.subarray(图起, 图起 + ibv.byteLength), 图类型: g.images[0].mimeType };''',
+            '''               图字节: ibv ? bin.subarray(图起, 图起 + ibv.byteLength) : null,
+               图类型: 图0 ? 图0.mimeType : "" };''')
 
     # ---------- 删掉诊断块 ----------
     i0 = js.index("    // ---- 诊断：蒙皮到底有没有作用到手臂 ----")
@@ -590,9 +731,15 @@ def 装配(js):
 
     function 开始加载() {
       if (!document.createElement("canvas").getContext("webgl2")) { window.小窝失败("NO_WEBGL2"); return; }
-      进度("正在读取房间模型…", 18);
-      载脚本("数据/房间模型.js", function () {
-        进度("正在读取角色模型…", 42);
+      // 家具是 9 个独立模型文件（各 0.1–0.7MB），串起来加载完再装玩偶
+      var 家具清单 = ["书架", "木桌", "椅子", "矮架", "落地灯", "盆栽", "坐垫堆", "便当盒"];
+      function 载家具(i, 完成后) {
+        if (i >= 家具清单.length) { 完成后(); return; }
+        进度("正在摆放家具 " + (i + 1) + "/" + 家具清单.length + "…", 18 + i * 4);
+        载脚本("数据/模型/" + 家具清单[i] + ".js", function () { 载家具(i + 1, 完成后); });
+      }
+      载家具(0, function () {
+        进度("正在读取角色模型…", 60);
         载脚本("数据/角色模型.js", function () {
           进度("正在拼装小窝…", 66);
           setTimeout(function () {
