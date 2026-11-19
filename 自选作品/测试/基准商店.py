@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品")
+根 = Path(__file__).resolve().parent.parent
 实装文件 = 根 / "养成商店.js"
 
 

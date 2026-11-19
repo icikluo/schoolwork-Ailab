@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品")
+根 = Path(__file__).resolve().parent.parent
 契约目录 = 根 / "schema"
 
 通过 = 0

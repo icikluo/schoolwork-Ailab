@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品")
+根 = Path(__file__).resolve().parent.parent
 
 通过 = 0
 失败 = 0

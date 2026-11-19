@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品")
+根 = Path(__file__).resolve().parent.parent
 
 # 从 动作.js 中提取数据（该文件以 window.动作数据 = [...] 形式保存）
 源 = (根 / "数据" / "动作.js").read_text(encoding="utf-8")

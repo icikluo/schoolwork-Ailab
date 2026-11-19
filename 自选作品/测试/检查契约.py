@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-根 = Path(r"D:\lab\自选作品")
+根 = Path(__file__).resolve().parent.parent
 # 共用 脚本.js + 样式.css 的页面（靠 取元素() 的哑元素兜底，所以 id 取并集检查）
 共用页面 = ["index.html", "目标.html", "食谱.html", "计划.html", "记录.html", "训练.html"]
 # 全部页面。v0.6 起 id 并集按全部页面算：脚本.js 以后的改动如果引用了养成页的 id，
