@@ -62,3 +62,9 @@ generated-images/
 _本地缓存/
 _acl-recovery/
 _chrome备份-*/
+
+# 2026-11-20 本机网络工具（不属于作业内容，只是让浏览器能打开 GitHub 的临时应急方案）
+#   WSL 能访问 GitHub、Windows 直连不通，故在 WSL 里跑一个转发代理
+打开GitHub.bat
+关闭GitHub代理.bat
+打开GitHub说明.md
