@@ -579,6 +579,7 @@ button {
 .计划日.今天 { border-color: var(--绿-中); background: #FDFDF8; }
 .计划日头 {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
@@ -599,6 +600,18 @@ button {
 .计划日.收起 .计划日名::after { content: "▸"; }
 .计划日统计 { font-size: 12px; color: var(--文字-淡); }
 .计划日统计.超额度 { color: var(--红); }
+.计划日右 { display: flex; align-items: center; gap: 8px; }
+.计划刷新按钮 {
+  padding: 2px 8px;
+  background: var(--绿-浅);
+  color: var(--绿-深);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.计划刷新按钮:hover { background: var(--绿-主); color: var(--卡白); }
 
 .计划餐 {
   display: flex;

@@ -8,7 +8,7 @@ v0.3 升级：旧版先剔注释再剔字符串，遇到字符串里含 "https:/
 import sys
 from pathlib import Path
 
-s = Path(r"D:\lab\自选作品\脚本.js").read_text(encoding="utf-8")
+s = (Path(__file__).resolve().parent.parent / "脚本.js").read_text(encoding="utf-8")
 
 状态 = "代码"
 输出 = []
