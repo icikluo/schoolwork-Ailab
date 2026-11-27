@@ -387,8 +387,31 @@ def 装配(js):
                   background: linear-gradient(90deg, var(--绿-中), #F2C75C); transition: width .4s ease-out; }
     .小窝小字 { font-size: 11.5px; color: var(--文字-淡); opacity: .82; }
     .小窝失败 { max-width: 320px; text-align: center; line-height: 1.75; font-size: 13px; color: var(--文字-淡); }
-    .小窝操作 { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+    .小窝操作 { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; z-index: 3; }
     .小窝操作 .文字按钮 { background: rgba(255,255,255,.92); border: 1px solid var(--边框); padding: 5px 11px; font-size: 12px; }
+
+    /* ---------- 2D 视图（像素房间）：和 3D 共用同一个舞台，只切显示 ---------- */
+    /* 摆位全部写死在 1024×530 的画布上，再整体缩放，家具才不会随窗口比例漂。 */
+    .小窝2D { position: absolute; inset: 0; overflow: hidden; display: none; background: #E7DBC2; }
+    .小窝2D[data-显="1"] { display: block; }
+    .小窝2D框 { position: absolute; left: 50%; top: 50%; width: 1024px; height: 530px;
+               transform-origin: 50% 50%; }
+    .小窝2D底 { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+               image-rendering: pixelated; }
+    .小窝2D件 { position: absolute; image-rendering: pixelated; pointer-events: none; user-select: none;
+               transform: translateX(-50%); filter: drop-shadow(0 4px 3px rgba(70, 55, 40, .18)); }
+    .小窝2D人 { position: absolute; left: 50%; margin-left: -67px; bottom: 30px;
+               width: 134px; height: 215px; z-index: 4;
+               filter: drop-shadow(0 4px 3px rgba(70, 55, 40, .18));
+               animation: 小窝呼吸 4.2s ease-in-out infinite; }
+    .小窝2D人 canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+    @keyframes 小窝呼吸 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .小窝2D注 { position: absolute; left: 14px; bottom: 12px; margin: 0; padding: 3px 9px;
+               border-radius: 99px; font-size: 12px; color: var(--文字-淡);
+               background: rgba(255, 253, 246, .78); }
+    .小窝舞台[data-视图="2D"] #画布 { display: none; }
+    .小窝舞台[data-视图="2D"] .小窝遮罩 { display: none; }
+    .小窝舞台[data-视图="2D"] #挥手按钮, .小窝舞台[data-视图="2D"] #复位按钮 { display: none; }
 
     .小窝网格 { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 16px; margin-top: 16px; }
     .换装行 { display: flex; align-items: center; gap: 9px; margin-top: 11px; flex-wrap: wrap; }
@@ -496,8 +519,14 @@ def 装配(js):
 
     <main class="容器">
       <section class="卡片 小窝卡片">
-        <div class="小窝舞台" id="舞台">
+        <div class="小窝舞台" id="舞台" data-视图="3D">
           <canvas id="画布"></canvas>
+          <div class="小窝2D" id="小窝2D" aria-hidden="true">
+            <div class="小窝2D框" id="小窝2D框">
+              <img class="小窝2D底" src="数据/房间/房间-2D.png" alt="像素风的小窝房间">
+            </div>
+            <p class="小窝2D注">2D 小人跟着换装的配色一起变</p>
+          </div>
           <div class="小窝遮罩" id="遮罩">
             <div class="小窝进度"><i id="进度条"></i></div>
             <p id="遮罩文字">正在搭你的小窝…</p>
@@ -506,6 +535,7 @@ def 装配(js):
           <div class="小窝操作">
             <button type="button" class="文字按钮" id="挥手按钮">挥个手</button>
             <button type="button" class="文字按钮" id="复位按钮">复位视角</button>
+            <button type="button" class="文字按钮" id="视图按钮">看 2D</button>
           </div>
         </div>
       </section>
@@ -549,6 +579,7 @@ def 装配(js):
     </main>
   </div>
 
+  <script src="数据/装扮.js"></script>
   <script src="养成.js"></script>
   <script src="养成反馈.js"></script>
 '''
@@ -652,6 +683,7 @@ def 装配(js):
       合并写(function (存) { 存.形象.染色 = 染色; });
       画换装();
       if (window.小窝操作) 小窝操作.设色(染色);
+      if (window.小窝2D刷人) window.小窝2D刷人();
     }
 
     // ---------- 宠物 ----------
@@ -733,6 +765,119 @@ def 装配(js):
       setTimeout(function () { location.reload(); }, 400);
     }
 
+    // ---------- 2D 视图（像素房间） ----------
+    // 3D 是手写 WebGL 的真房间，2D 是同一间屋子的像素版，两边只切显示、不重载模型。
+    // 摆位写在 1024×530 的固定画布上（与房间底图同尺寸），整块再按舞台等比缩放，
+    // 这样窗口一变，家具和地板线仍然对得上（用百分比就会漂）。
+    // 房间底图 1024×530：墙面到 y≈356（踢脚线），地面从 y≈388 到底。
+    // 图标已裁到内容框，所以「高」就是画面里的实际高度，不用再猜透明边；
+    // 每件都用 中（中线 x）+ 底（离画面底边）定位，靠后的站得高、靠前的站得低。
+    var 二维陈设 = [
+      { 图: "家具-地毯", 宽: 260, 中: 512, 底: 20, 层: 1 },
+      { 图: "家具-书架", 高: 215, 中: 790, 底: 105, 层: 2 },
+      { 图: "家具-落地灯", 高: 185, 中: 150, 底: 70, 层: 2 },
+      { 图: "家具-木桌", 高: 100, 中: 330, 底: 58, 层: 3 },
+      { 图: "家具-小沙发", 高: 105, 中: 660, 底: 42, 层: 3 },
+      { 图: "家具-绿植", 高: 120, 中: 905, 底: 16, 层: 3 }
+    ];
+
+    function 画二维() {
+      var 框 = document.getElementById("小窝2D框");
+      if (!框 || 框.dataset.好) return;
+      二维陈设.slice().sort(function (a, b) { return a.层 - b.层; }).forEach(function (件) {
+        var 图 = document.createElement("img");
+        图.className = "小窝2D件";
+        图.src = "数据/家具图标/" + 件.图 + ".png";
+        图.alt = "";
+        图.style.zIndex = 件.层;
+        图.style.left = 件.中 + "px";
+        图.style.bottom = 件.底 + "px";
+        if (件.宽) 图.style.width = 件.宽 + "px";
+        if (件.高) 图.style.height = 件.高 + "px";
+        框.appendChild(图);
+      });
+      var 人 = document.createElement("div");
+      人.className = "小窝2D人";
+      人.id = "小窝2D人";
+      框.appendChild(人);
+      刷小人();
+      框.dataset.好 = "1";
+    }
+
+    // ---------- 2D 小人：和 3D 玩偶共用一份形象数据 ----------
+    // 存档.形象 里是 11 个部件 id，染色是 上衣/裤子/鞋 三个颜色；
+    // 这里直接拿 数据/装扮.js 的 SVG 图层拼人，所以换装配色一变，2D 也跟着变。
+    var 小人顺序 = [
+      ["脸型", null], ["眉", null], ["眼", null], ["嘴", null], ["腮红", null],
+      ["发型", null], ["裤子", "裤子"], ["鞋", "鞋"], ["上衣", "上衣"], ["配饰", null]
+    ];
+
+    function 取装扮件(分类, id) {
+      var 表 = (window.装扮数据 || {})[分类] || [];
+      for (var i = 0; i < 表.length; i++) if (表[i].id === id) return 表[i];
+      return null;
+    }
+
+    // 只改实心填充：fill='none' 的是描边线，涂上去会把整块区域涂死
+    function 套色(图层, 色) {
+      return 色 ? String(图层).replace(/fill='(?!none)[^']*'/g, "fill='" + 色 + "'") : 图层;
+    }
+
+    function 刷小人() {
+      var 盒 = document.getElementById("小窝2D人");
+      if (!盒 || !window.装扮数据) return;
+      var 形 = (存档 && 存档.形象) || {};
+      var 肤 = 取装扮件("肤色", 形.肤色);
+      var 图 = 小人顺序.map(function (项) {
+        var 件 = 取装扮件(项[0], 形[项[0]]);
+        return 件 ? 套色(件.图层 || "", 项[1] ? 染色[项[1]] : null) : "";
+      }).join("");
+      // 先画成 SVG，再按 100×160 重采样到画布：矢量细节留在小尺寸上，放大后就是像素块
+      var 串 = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" width="200" height="320">' +
+        '<style>.肤色{fill:' + ((肤 && 肤.色值) || "#F5DCC4") + '}</style>' + 图 + "</svg>";
+      var 源 = new Image();
+      源.onload = function () {
+        var 布 = document.createElement("canvas");
+        布.width = 100;
+        布.height = 160;
+        var 笔 = 布.getContext("2d");
+        笔.imageSmoothingEnabled = false;
+        笔.drawImage(源, 0, 0, 100, 160);
+        盒.innerHTML = "";
+        盒.appendChild(布);
+      };
+      源.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(串);
+    }
+    window.小窝2D刷人 = 刷小人;
+
+    function 缩放二维() {
+      var 舞台 = document.getElementById("舞台"), 框 = document.getElementById("小窝2D框");
+      if (!舞台 || !框) return;
+      // 等比放大到把舞台填满，多出来的部分由 .小窝2D 的 overflow 裁掉
+      var s = Math.max(舞台.clientWidth / 1024, 舞台.clientHeight / 530);
+      框.style.transform = "translate(-50%, -50%) scale(" + s.toFixed(4) + ")";
+    }
+
+    var 当前视图 = "3D";
+    function 切视图(视图) {
+      var 舞台 = document.getElementById("舞台"), 层 = document.getElementById("小窝2D"),
+          钮 = document.getElementById("视图按钮");
+      if (!舞台 || !层 || !钮) return;
+      当前视图 = 视图 === "2D" ? "2D" : "3D";
+      if (当前视图 === "2D") { 画二维(); 刷小人(); 缩放二维(); }
+      舞台.dataset.视图 = 当前视图;
+      层.dataset.显 = 当前视图 === "2D" ? "1" : "0";
+      层.setAttribute("aria-hidden", 当前视图 === "2D" ? "false" : "true");
+      钮.textContent = 当前视图 === "2D" ? "看 3D" : "看 2D";
+    }
+
+    document.getElementById("视图按钮").addEventListener("click", function () {
+      切视图(当前视图 === "2D" ? "3D" : "2D");
+    });
+    window.addEventListener("resize", function () {
+      if (当前视图 === "2D") 缩放二维();
+    });
+
     // ---------- 模型懒加载 ----------
     var 遮罩 = document.getElementById("遮罩"), 进度条 = document.getElementById("进度条");
     function 进度(文字, 百分比) {
@@ -749,8 +894,12 @@ def 装配(js):
     };
     window.小窝失败 = function (原因) {
       if (原因 === "NO_WEBGL2") {
-        遮罩.innerHTML = '<p class="小窝失败">这台电脑的浏览器没开 WebGL2，小窝暂时显示不了。<br>' +
-          '换成新版 Chrome 或 Edge 再打开就好，打卡和换装数据都不受影响。</p>';
+        // 没 WebGL2 不等于没小窝：2D 视图是纯图片，照样能看，直接切过去并把 3D 入口锁掉
+        切视图("2D");
+        var 钮 = document.getElementById("视图按钮");
+        if (钮) { 钮.disabled = true; 钮.textContent = "此机只支持 2D"; }
+        遮罩.innerHTML = '<p class="小窝失败">这台电脑的浏览器没开 WebGL2，3D 房间显示不了，' +
+          '已经换成 2D 像素小窝。<br>打卡、换装、宠物数据都不受影响。</p>';
       } else {
         遮罩.innerHTML = '<p class="小窝失败">小窝没能加载出来：' + 原因 + '<br>' +
           '打卡、换装、宠物都还能正常用，刷新一次再试试。</p>';

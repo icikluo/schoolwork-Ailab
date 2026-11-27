@@ -26,9 +26,33 @@
                   background: linear-gradient(90deg, var(--绿-中), #F2C75C); transition: width .4s ease-out; }
     .小窝小字 { font-size: 11.5px; color: var(--文字-淡); opacity: .82; }
     .小窝失败 { max-width: 320px; text-align: center; line-height: 1.75; font-size: 13px; color: var(--文字-淡); }
-    .小窝操作 { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+    .小窝操作 { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; z-index: 3; }
     .小窝操作 .文字按钮 { background: rgba(255,255,255,.92); border: 1px solid var(--边框); padding: 5px 11px; font-size: 12px; }
 
+    /* ---------- 2D 视图（像素房间）：和 3D 共用同一个舞台，只切显示 ---------- */
+    /* 摆位全部写死在 1024×530 的画布上，再整体缩放，家具才不会随窗口比例漂。 */
+    .小窝2D { position: absolute; inset: 0; overflow: hidden; display: none; background: #E7DBC2; }
+    .小窝2D[data-显="1"] { display: block; }
+    .小窝2D框 { position: absolute; left: 50%; top: 50%; width: 1024px; height: 530px;
+               transform-origin: 50% 50%; }
+    .小窝2D底 { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+               image-rendering: pixelated; }
+    .小窝2D件 { position: absolute; image-rendering: pixelated; pointer-events: none; user-select: none;
+               transform: translateX(-50%); filter: drop-shadow(0 4px 3px rgba(70, 55, 40, .18)); }
+    .小窝2D人 { position: absolute; left: 50%; margin-left: -67px; bottom: 30px;
+               width: 134px; height: 215px; z-index: 4;
+               filter: drop-shadow(0 4px 3px rgba(70, 55, 40, .18));
+               animation: 小窝呼吸 4.2s ease-in-out infinite; }
+    .小窝2D人 canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+    @keyframes 小窝呼吸 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .小窝2D注 { position: absolute; left: 14px; bottom: 12px; margin: 0; padding: 3px 9px;
+               border-radius: 99px; font-size: 12px; color: var(--文字-淡);
+               background: rgba(255, 253, 246, .78); }
+    .小窝舞台[data-视图="2D"] #画布 { display: none; }
+    .小窝舞台[data-视图="2D"] .小窝遮罩 { display: none; }
+    .小窝舞台[data-视图="2D"] #挥手按钮, .小窝舞台[data-视图="2D"] #复位按钮 { display: none; }
+
+    .小窝网格 { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 16px; margin-top: 16px; }
     .换装行 { display: flex; align-items: center; gap: 9px; margin-top: 11px; flex-wrap: wrap; }
     .换装行:first-child { margin-top: 4px; }
     .换装名 { width: 44px; font-size: 13px; color: var(--文字-淡); flex: none; }
@@ -52,46 +76,6 @@
     .宠物名 { font: inherit; font-size: 15px; font-weight: 600; color: var(--绿-深);
               border: 1px solid transparent; border-radius: 6px; padding: 2px 5px; width: 108px; background: transparent; }
     .宠物名:hover, .宠物名:focus { border-color: var(--边框-深); background: var(--卡白); outline: none; }
-    /* 像素宠物 */
-    .像素舞台 { display: flex; justify-content: center; padding: 10px 0 4px; }
-    .像素宠 {
-      width: 192px; height: 192px; image-rendering: pixelated;
-      background: linear-gradient(180deg, #D3E9F8 0%, #D3E9F8 60%, #C4E5C5 60%, #B4DFB2 100%);
-      border-radius: 24px;
-    }
-    /* 互动动画：吃=左右摇摆着嚼，玩=原地蹦跳 */
-    .像素舞台.互动中 .像素宠 { animation: 宠蹦跳 .5s ease-in-out infinite; }
-    .像素舞台.互动中[data-动="吃"] .像素宠 { animation: 宠嚼动 .38s ease-in-out infinite; }
-    @keyframes 宠嚼动 {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      30% { transform: translateY(-3px) rotate(-4deg); }
-      70% { transform: translateY(-3px) rotate(4deg); }
-    }
-    @keyframes 宠蹦跳 {
-      0%, 100% { transform: translateY(0); }
-      45%, 60% { transform: translateY(-14px); }
-    }
-    .亲密条 { height: 7px; border-radius: 99px; background: var(--绿-浅, #F2EFE4); overflow: hidden; margin: 8px 2px 2px; }
-    .亲密条 i { display: block; height: 100%; border-radius: 99px;
-                background: linear-gradient(90deg, var(--绿-中, #7FAE6A), #F2C75C); transition: width .3s ease; }
-    .互动排 { display: flex; gap: 8px; margin-top: 10px; }
-    .互动钮 {
-      flex: 1; border: 1px solid var(--边框-深, #D8CFBB); background: #FFFFFF;
-      border-radius: 10px; padding: 8px 6px; font: inherit; font-size: 13px;
-      cursor: pointer; color: var(--文字-主, #333);
-    }
-    .互动钮:hover { background: var(--绿-浅, #F2EFE4); }
-    .互动钮:active { transform: translateY(1px); }
-    .互动钮 small { color: var(--文字-淡, #999); font-size: 11px; }
-    .宠物商店 {
-      margin-top: 10px; padding: 10px 12px;
-      border: 1px dashed var(--边框-深, #D8CFBB); border-radius: 12px;
-      background: rgba(255, 255, 255, 0.65);
-    }
-    .商店题 { font-size: 13px; display: block; margin-bottom: 8px; color: var(--文字-主, #333); }
-    .商店题 b { color: var(--绿-深, #4C7A2E); }
-    .商店行 { display: flex; gap: 8px; }
-    .宠物回执 { font-size: 12px; color: var(--绿-主, #5E8F3C); min-height: 16px; margin: 8px 0 0; }
     .宠物注 { font-size: 12px; color: var(--文字-淡); margin: 9px 0 0; line-height: 1.7; }
     .存档区 textarea {
       width: 100%; height: 78px; margin-top: 10px; padding: 8px 10px; resize: vertical;
@@ -104,7 +88,9 @@
     .存档按钮 button:hover { background: #DFEEC9; }
     .存档回执 { font-size: 12px; color: var(--绿-主); margin: 8px 0 0; min-height: 17px; }
 
-    /* ---------- 今日任务 · 手机小部件样式（保留给应用窗复用的任务区样式） ---------- */
+    /* ---------- 今日任务 · 手机小部件（M3） ----------
+     * 用户点名要「模拟手机的感觉」：圆角机身 + 状态栏 + home 条，
+     * 内容由 养成反馈.js 的 画任务区 填进 #小窝任务区（浅色主题加 .任务浅）。 */
     .手机框 {
       position: relative;
       max-width: 264px;
@@ -127,120 +113,8 @@
       background: var(--边框-深); opacity: 0.45;
       margin: 10px auto 4px;
     }
-
-    /* ---------- 小窝排：左边 3D 小窝，右边一个带壁纸的手机桌面 ---------- */
-    .小窝排 {
-      display: flex; align-items: stretch;
-      gap: 16px; padding: 18px;
-      width: 100%;
-    }
-    /* 手机壳：撑满左半边 */
-    .小窝手机壳 {
-      position: relative;
-      flex: 1 1 0;
-      min-width: 0;
-      margin: 0;
-      padding: 10px 12px 8px;
-      border-radius: 34px;
-      background: linear-gradient(180deg, #FDFBF3 0%, #F1EADA 100%);
-      border: 1px solid var(--边框);
-      box-shadow: 0 16px 36px rgba(39, 80, 10, 0.16), inset 0 0 0 6px #FFFFFF;
-    }
-    .小窝手机壳 .小窝舞台 {
-      height: clamp(480px, calc(100vh - 210px), 680px);
-      border-radius: 22px;
-      overflow: hidden;
-      touch-action: none;
-    }
-    .小窝手机壳 .手机状态栏 { padding: 2px 6px 8px; }
-    .小窝手机壳 .手机状态栏 b { font-weight: 600; color: var(--文字-主, #333); }
-    .小窝手机壳 .小窝操作 { right: 10px; bottom: 10px; }
-    .小窝操作 .文字按钮 { min-width: 30px; text-align: center; }
-    /* 桌面：撑满右半边，渐变壁纸 + 云 + 太阳，app 图标摆在上面 */
-    .小窝桌面 {
-      position: relative;
-      flex: 1 1 0;
-      min-width: 280px;
-      display: flex; flex-direction: column;
-      border-radius: 26px; overflow: hidden;
-      border: 1px solid var(--边框);
-      background:
-        radial-gradient(circle at 84% 14%, rgba(255, 216, 130, 0.75) 0%, rgba(255, 216, 130, 0) 22%),
-        radial-gradient(closest-side at 76% 16%, rgba(255,255,255, 0.85), rgba(255,255,255,0) 72%),
-        radial-gradient(closest-side at 16% 26%, rgba(255,255,255, 0.65), rgba(255,255,255,0) 70%),
-        radial-gradient(closest-side at 50% 6%, rgba(255,255,255, 0.5), rgba(255,255,255,0) 65%),
-        linear-gradient(168deg, #BFDCF4 0%, #D9EEDF 52%, #F6EBD2 100%);
-      box-shadow: 0 16px 36px rgba(39, 80, 10, 0.14);
-    }
-    .桌面钟 { text-align: center; margin: 30px 0 4px; color: #FFFFFF; text-shadow: 0 2px 8px rgba(50, 90, 60, 0.30); }
-    .桌面钟 b { display: block; font-size: 44px; font-weight: 600; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
-    .桌面钟 span { font-size: 13.5px; opacity: 0.95; }
-    .应用格 {
-      flex: 1;
-      display: grid; grid-template-columns: repeat(2, 104px);
-      gap: 30px 26px; align-content: center; justify-content: center;
-      padding: 10px 0 16px;
-    }
-    .应用图标 {
-      border: none; background: none; cursor: pointer; padding: 0; font: inherit;
-      text-decoration: none;
-      display: flex; flex-direction: column; align-items: center; gap: 7px;
-    }
-    .应用图 {
-      width: 76px; height: 76px; border-radius: 22px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 35px; color: #FFFFFF;
-      box-shadow: 0 7px 14px rgba(46, 74, 110, 0.26), inset 0 1.5px 0 rgba(255,255,255, 0.45);
-      transition: transform .16s ease, box-shadow .16s ease;
-    }
-    .应用图标:hover .应用图 { transform: translateY(-3px) scale(1.05); box-shadow: 0 10px 18px rgba(46, 74, 110, 0.32), inset 0 1.5px 0 rgba(255,255,255, 0.45); }
-    .应用图标:active .应用图 { transform: scale(0.94); }
-    .应用图标[data-面板="任务"] .应用图 { background: linear-gradient(160deg, #7FB2E5, #4A6D9A); }
-    .应用图标[data-面板="换装"] .应用图 { background: linear-gradient(160deg, #F2A2B6, #D96A8A); }
-    .应用图标[data-面板="宠物"] .应用图 { background: linear-gradient(160deg, #A3CF8F, #6E9B5E); }
-    .应用图标[data-面板="存档"] .应用图 { background: linear-gradient(160deg, #B79BE0, #7E5BB8); }
-    .应用图标[data-面板="食谱"] .应用图 { background: linear-gradient(160deg, #F2C75C, #D99A2B); }
-    .应用图标[data-面板="动作"] .应用图 { background: linear-gradient(160deg, #E89A7B, #C25E3F); }
-    .应用名 { font-size: 13px; color: #FFFFFF; text-shadow: 0 1px 4px rgba(40, 70, 50, 0.35); }
-    .桌面home条 {
-      width: 84px; height: 4px; border-radius: 99px;
-      background: rgba(255,255,255, 0.75); margin: 0 auto 12px;
-    }
-    /* 点 app 后从桌面弹出的应用窗 */
-    .应用窗 {
-      position: absolute; inset: 10px;
-      display: flex; flex-direction: column;
-      background: rgba(255, 253, 248, 0.97);
-      border-radius: 20px;
-      box-shadow: 0 14px 32px rgba(30, 50, 80, 0.28);
-      opacity: 0; transform: translateY(26px) scale(0.97); pointer-events: none;
-      transition: opacity .22s ease, transform .22s ease;
-    }
-    .应用窗[data-开="1"] { opacity: 1; transform: none; pointer-events: auto; }
-    .应用窗头 {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 14px 10px; border-bottom: 1px solid var(--边框);
-      font-size: 14px; color: var(--文字-主, #333);
-    }
-    .应用关 {
-      border: none; background: none; cursor: pointer;
-      font-size: 19px; line-height: 1; color: var(--文字-淡, #999); padding: 2px 6px;
-    }
-    .应用关:hover { color: var(--文字-主, #333); }
-    .应用窗体 { flex: 1; overflow-y: auto; padding: 13px 15px; }
-    .存档概览 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .存档概览 > div {
-      background: var(--绿-浅, #F2EFE4); border-radius: 10px;
-      padding: 8px 12px; font-size: 12px; color: var(--文字-淡, #999);
-    }
-    .存档概览 b { display: block; font-size: 15px; color: var(--文字-主, #333); margin-top: 2px; }
     @media (max-width: 900px) {
-      .小窝排 { flex-wrap: wrap; }
-      .小窝桌面 { min-width: 0; width: 100%; min-height: 380px; }
-      .应用格 { align-content: start; }
-      .应用窗 { inset: 0; border-radius: 0; }
-      .小窝手机壳 { width: 100%; flex: none; }
-      .小窝手机壳 .小窝舞台 { height: clamp(320px, 56vh, 460px); }
+      .小窝舞台 { height: 46vh; min-height: 300px; }
     }
   </style>
 </head>
@@ -280,95 +154,67 @@
 
     <main class="容器">
       <section class="卡片 小窝卡片">
-        <div class="小窝排">
-          <div class="小窝手机壳">
-            <div class="手机状态栏">
-              <span>🏠 我的小窝</span>
-              <span><b id="小窝时钟">--:--</b>&nbsp;&nbsp;📶&nbsp;🔋</span>
+        <div class="小窝舞台" id="舞台" data-视图="3D">
+          <canvas id="画布"></canvas>
+          <div class="小窝2D" id="小窝2D" aria-hidden="true">
+            <div class="小窝2D框" id="小窝2D框">
+              <img class="小窝2D底" src="数据/房间/房间-2D.png" alt="像素风的小窝房间">
             </div>
-            <div class="小窝舞台" id="舞台">
-              <canvas id="画布"></canvas>
-              <div class="小窝遮罩" id="遮罩">
-                <div class="小窝进度"><i id="进度条"></i></div>
-                <p id="遮罩文字">正在搭你的小窝…</p>
-                <p class="小窝小字" id="遮罩小字">第一次打开要读两个模型，稍等一下</p>
-              </div>
-            <div class="小窝操作">
-              <button type="button" class="文字按钮" id="拉近按钮" title="放大视角" aria-label="放大视角">＋</button>
-              <button type="button" class="文字按钮" id="拉远按钮" title="缩小视角" aria-label="缩小视角">－</button>
-              <button type="button" class="文字按钮" id="挥手按钮">挥个手</button>
-              <button type="button" class="文字按钮" id="复位按钮">复位视角</button>
-            </div>
-            </div>
-            <div class="手机home条" aria-hidden="true"></div>
+            <p class="小窝2D注">2D 小人跟着换装的配色一起变</p>
           </div>
-
-          <div class="小窝桌面" aria-label="小窝功能桌面">
-            <div class="桌面钟">
-              <b id="桌面时钟">--:--</b>
-              <span id="桌面日期">—</span>
-            </div>
-            <div class="应用格" role="toolbar" aria-label="小窝应用">
-              <button type="button" class="应用图标" data-面板="任务" aria-label="打开今日任务">
-                <span class="应用图">📋</span><span class="应用名">今日任务</span>
-              </button>
-              <button type="button" class="应用图标" data-面板="换装" aria-label="打开换装">
-                <span class="应用图">🎨</span><span class="应用名">换装间</span>
-              </button>
-              <button type="button" class="应用图标" data-面板="宠物" aria-label="打开宠物">
-                <span class="应用图">🐱</span><span class="应用名">我的伙伴</span>
-              </button>
-              <button type="button" class="应用图标" data-面板="存档" aria-label="打开存档">
-                <span class="应用图">💾</span><span class="应用名">存档柜</span>
-              </button>
-              <a class="应用图标" href="食谱.html" aria-label="去食谱专区">
-                <span class="应用图">📖</span><span class="应用名">食谱专区</span>
-              </a>
-              <a class="应用图标" href="训练.html" aria-label="去动作库">
-                <span class="应用图">💪</span><span class="应用名">动作库</span>
-              </a>
-            </div>
-            <div class="桌面home条" aria-hidden="true"></div>
-
-            <div class="应用窗" id="应用窗" data-开="0">
-              <div class="应用窗头">
-                <b id="应用标题">今日任务</b>
-                <button type="button" class="应用关" id="应用关按钮" aria-label="回到桌面">×</button>
-              </div>
-              <div class="应用窗体">
-                <div class="抽屉面板" id="抽屉任务面板">
-                  <div class="任务区 任务浅" id="抽屉任务"></div>
-                  <p class="宠物注" style="margin-bottom:0">和下面「今日任务」卡是同一份数据，点一下就打卡。</p>
-                </div>
-                <div class="抽屉面板" id="抽屉换装面板" hidden>
-                  <div id="抽屉换装"></div>
-                  <p class="宠物注" id="抽屉换装提示" style="margin-bottom:0">当前：全部保持原色</p>
-                </div>
-                <div class="抽屉面板" id="抽屉宠物面板" hidden>
-                  <div id="抽屉宠物"></div>
-                </div>
-              <div class="抽屉面板" id="抽屉存档面板" hidden>
-                <div id="抽屉存档"></div>
-                <div class="存档区">
-                  <textarea id="存档文本" spellcheck="false" placeholder="点「导出」把存档变成一段文本，复制走存好"></textarea>
-                  <div class="存档按钮">
-                    <button type="button" id="导出按钮">导出</button>
-                    <button type="button" id="导入按钮">导入</button>
-                  </div>
-                  <p class="存档回执" id="存档回执"></p>
-                </div>
-              </div>
-              </div>
-            </div>
+          <div class="小窝遮罩" id="遮罩">
+            <div class="小窝进度"><i id="进度条"></i></div>
+            <p id="遮罩文字">正在搭你的小窝…</p>
+            <p class="小窝小字" id="遮罩小字">第一次打开要读两个模型，稍等一下</p>
+          </div>
+          <div class="小窝操作">
+            <button type="button" class="文字按钮" id="挥手按钮">挥个手</button>
+            <button type="button" class="文字按钮" id="复位按钮">复位视角</button>
+            <button type="button" class="文字按钮" id="视图按钮">看 2D</button>
           </div>
         </div>
-        <p class="宠物注" style="text-align:center; margin:2px 16px 14px;">
-          左边是 3D 小窝：单指拖动转视角，双指捏合（电脑上滚轮）拉近拉远，戳一下玩偶它会跟你打招呼。右边的桌面点 app 就能直接用。
-        </p>
       </section>
+
+      <div class="小窝网格">
+        <section class="卡片">
+          <h2>今日任务</h2>
+          <p class="宠物注" style="margin-top:0">像手机上的小部件：喝水运动直接点，三餐去记录页记一餐就自动打卡。</p>
+          <div class="手机框">
+            <div class="手机状态栏"><span id="手机日期">—</span><span aria-hidden="true">📶 🔋</span></div>
+            <div class="任务区 任务浅" id="小窝任务区"></div>
+            <div class="手机home条" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="卡片">
+          <h2>换装</h2>
+          <p class="宠物注" style="margin-top:0">颜色实时生效，直接存进存档。款式要等低模服装包，先玩配色。</p>
+          <div id="换装区"></div>
+          <p class="宠物注" id="换装提示">当前：全部保持原色</p>
+        </section>
+
+        <section class="卡片">
+          <h2>宠物</h2>
+          <div id="宠物区"></div>
+        </section>
+
+        <section class="卡片">
+          <h2>存档</h2>
+          <p class="宠物注" style="margin-top:0">存档只在这台电脑的浏览器里。换电脑或清缓存前，先导出备份。</p>
+          <div class="存档区">
+            <textarea id="存档文本" spellcheck="false" placeholder="点「导出」把存档变成一段文本，复制走存好"></textarea>
+            <div class="存档按钮">
+              <button type="button" id="导出按钮">导出</button>
+              <button type="button" id="导入按钮">导入</button>
+            </div>
+            <p class="存档回执" id="存档回执"></p>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
+  <script src="数据/装扮.js"></script>
   <script src="养成.js"></script>
   <script src="养成反馈.js"></script>
   <script>
@@ -859,8 +705,6 @@
       // 连点不打断：已经举起来了就只延长，不再从零抬一次（否则手会抽一下）
       "挥手": function () { if (时间 >= 挥到) 挥起 = 时间; 挥到 = 时间 + 2.6; },
       "复位": function () { 场景.偏航 = 0.52; 场景.俯仰 = 0.24; 场景.距离 = 5.6; 画一帧(); },
-      // 步为负=拉近，正=拉远（给 ＋/－ 按钮用）
-      "缩放": function (步) { 场景.距离 = 夹住(场景.距离 + 步, 3.0, 9.0); 画一帧(); },
       "设色": function (新染) { 染 = 新染 || {}; 画一帧(); }
     };
     function 画一帧() {
@@ -870,13 +714,10 @@
       画.clearColor(0, 0, 0, 0);
       画.clear(画.COLOR_BUFFER_BIT | 画.DEPTH_BUFFER_BIT);
 
-      // 垂直视角固定时，画布越宽两侧越多空地。按宽高比调距离：
-      // 宽屏推近填满舞台；竖屏拉远——系数按「横向刚好罩住 4.7 米宽的房间」推出来，
-      // 上限 1.75 倍，再远房间就太小了。
+      // 垂直视角固定时，画布越宽两侧越多空地。按宽高比把镜头推近，
+      // 让房间在 16:9 的舞台上也能填满，而窄屏保持原距离。
       var 比 = w / h;
-      var 距 = 场景.距离;
-      if (比 > 1.45) 距 *= Math.max(0.80, 1.45 / 比 * 1.06);
-      else if (比 < 1.2) 距 *= Math.min(1.75, 1.152 / 比);
+      var 距 = 场景.距离 * (比 > 1.45 ? Math.max(0.80, 1.45 / 比 * 1.06) : 1);
       var cp = Math.cos(场景.俯仰);
       var 眼 = [场景.眼目标[0] + 距*cp*Math.sin(场景.偏航),
                 场景.眼目标[1] + 距*Math.sin(场景.俯仰),
@@ -966,50 +807,16 @@
       画.drawElements(画.TRIANGLES, 偶.索引.length, 画.UNSIGNED_INT, 0);
     }
 
-    // 交互：像手机一样——单指拖转视角、双指捏合拉近拉远、轻点打招呼
-    var 指尖 = {}, 拖动距 = 0, 按下时刻 = 0;
-    function 指距() {
-      var k = Object.keys(指尖), a = 指尖[k[0]], b = 指尖[k[1]];
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
-    画布.addEventListener("pointerdown", function (e) {
-      指尖[e.pointerId] = { x: e.clientX, y: e.clientY };
-      拖动距 = 0; 按下时刻 = performance.now();
+    // 交互
+    var 拖 = false, px = 0, py = 0;
+    画布.addEventListener("pointerdown", function (e) { 拖 = true; px = e.clientX; py = e.clientY; });
+    window.addEventListener("pointermove", function (e) {
+      if (!拖) return;
+      场景.偏航 += (e.clientX - px) * 0.006;
+      场景.俯仰 = Math.max(-0.1, Math.min(1.0, 场景.俯仰 - (e.clientY - py) * 0.004));
+      px = e.clientX; py = e.clientY;
     });
-    // 视角范围：偏航锁在正面扇形里（绕不到房间背面去），俯仰不让钻到桌底
-    var 偏航最小 = -0.35, 偏航最大 = 1.45;
-    function 夹住(值, 最小, 最大) { return Math.max(最小, Math.min(最大, 值)); }
-    画布.addEventListener("pointermove", function (e) {
-      var p = 指尖[e.pointerId];
-      if (!p) return;
-      if (Object.keys(指尖).length >= 2) {
-        // 双指捏合：张开=拉近，捏拢=拉远
-        var 前 = 指距();
-        p.x = e.clientX; p.y = e.clientY;
-        场景.距离 = 夹住(场景.距离 - (指距() - 前) * 0.012, 3.0, 9.0);
-      } else {
-        // 横向（用户定的方向）：往左拖，镜头往右绕行
-        场景.偏航 = 夹住(场景.偏航 - (e.clientX - p.x) * 0.006, 偏航最小, 偏航最大);
-        // 纵向（和横向同一个规则，方向相反）：往上拖，镜头往下压
-        场景.俯仰 = 夹住(场景.俯仰 + (e.clientY - p.y) * 0.004, 0.0, 1.05);
-        拖动距 += Math.hypot(e.clientX - p.x, e.clientY - p.y);
-        p.x = e.clientX; p.y = e.clientY;
-      }
-    });
-    function 抬指(e) {
-      var 是双指 = Object.keys(指尖).length >= 2;
-      delete 指尖[e.pointerId];
-      // 单指轻点（几乎没拖、时间短）：戳一下玩偶，它挥手回应
-      if (!是双指 && 拖动距 < 6 && performance.now() - 按下时刻 < 350) 小窝操作.挥手();
-    }
-    画布.addEventListener("pointerup", 抬指);
-    画布.addEventListener("pointercancel", 抬指);
-    // 电脑上没有双指，用滚轮模拟捏合
-    画布.addEventListener("wheel", function (e) {
-      e.preventDefault();
-      场景.距离 = 夹住(场景.距离 + (e.deltaY > 0 ? 0.35 : -0.35), 3.0, 9.0);
-      画一帧();
-    }, { passive: false });
+    window.addEventListener("pointerup", function () { 拖 = false; });
 
     var 静帧 = location.search.indexOf("静帧") >= 0;
     if (静帧) 时间 = 0.58;
@@ -1081,7 +888,8 @@
                                      ["#C9B79C", "米"]] }
     ];
 
-    function 渲染换装(区, 提示) {
+    function 画换装() {
+      var 区 = document.getElementById("换装区");
       区.innerHTML = "";
       款式表.forEach(function (款) {
         var 行 = document.createElement("div");
@@ -1116,14 +924,8 @@
 
       var 已 = 款式表.filter(function (款) { return 染色[款.键]; })
         .map(function (款) { return 款.名; });
-      if (提示) 提示.textContent =
+      document.getElementById("换装提示").textContent =
         已.length ? "当前：已改 " + 已.join(" / ") : "当前：全部保持原色";
-    }
-
-    // 换装入口都在桌面「换装间」应用窗里；窗口开着才渲染
-    function 画换装() {
-      if (当前抽屉 !== "换装") return;
-      渲染换装(document.getElementById("抽屉换装"), document.getElementById("抽屉换装提示"));
     }
 
     function 设色(键名, 值) {
@@ -1131,6 +933,7 @@
       合并写(function (存) { 存.形象.染色 = 染色; });
       画换装();
       if (window.小窝操作) 小窝操作.设色(染色);
+      if (window.小窝2D刷人) window.小窝2D刷人();
     }
 
     // ---------- 宠物 ----------
@@ -1141,237 +944,8 @@
       return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
     }
 
-    // ---------- 像素宠物（手绘 24×24 精灵） ----------
-    // 每个字符是一个「像素」，渲染到画布时放大 8 倍（24×8=192），image-rendering: pixelated 保持硬边
-    var 像素调色板 = {
-      "猫": { k: "#4A3626", b: "#E8A25C", d: "#C97F3D", w: "#FFF4E3", p: "#E8837E", y: "#5B84B8" },
-      "狗": { k: "#4A3626", b: "#B98A5E", d: "#8F6239", w: "#FFF4E3", p: "#E8837E", y: "#E4574C" },
-      "兔": { k: "#6B5A4E", b: "#F5EFE6", d: "#D9CFC0", w: "#FFFFFF", p: "#F2A9B8", y: "#7FAE6A" }
-    };
-var 像素底稿 = {
-      "猫": [
-        "........................",
-        "....k..............k....",
-        "...kbk............kbk...",
-        "...kbpk..........kpbk...",
-        "..kbbpk..........kpbbk..",
-        "..kbbbpk........kpbbbk..",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        ".kdbbbbbbbbbbbbbbbbbbdk.",
-        "..kbbbbbbbbbbbbbbbbbbkbk",
-        "...kbbbbbbbbbbbbbbbbk.bk",
-        "..kbbbbbbwwwwwwbbbbbbkbk",
-        "..kbbbbbbwwwwwwbbbbbbkdk",
-        "..kbbbbbbwwwwwwbbbbbbkbk",
-        "...kbbbbbwwwwwwbbbbbk.bk",
-        "...kbbkwwkbbbbkwwkbbk.k.",
-        "...kbbkkkkbbbbkkkkbbk...",
-        "........................",
-        "........................"
-      ],
-      "狗": [
-        "........................",
-        "........................",
-        "....kbbbbbbbbbbbbbbk....",
-        "...kbbbbbbbbbbbbbbbbk...",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbbbbbbbbbbbbdkdk",
-        "kdkdbbbbbwwwwwwbbbbbdkdk",
-        "kdkdbbbbbwwwwwwbbbbbdkdk",
-        ".k.kbbbbbwwwwwwbbbbbk.k.",
-        "..kbbbbbbbwwwwbbbbbbbk..",
-        "..kyyyyyyyywwyyyyyyyyk..",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "...kbbbbbwwwwwwbbbbbk...",
-        "...kbbkwwkbbbbkwwkbbk...",
-        "...kbbkkkkbbbbkkkkbbk...",
-        "........................",
-        "........................"
-      ],
-      "兔": [
-        "........................",
-        ".....kk..........kk.....",
-        "....kppk........kppk....",
-        "....kppk........kppk....",
-        "....kbpk........kpbk....",
-        "....kbbk........kbbk....",
-        "...kbbbbk......kbbbbk...",
-        "..kbbbbbbbbbbbbbbbbbbk..",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        "kbbbbbbbbbbbbbbbbbbbbbbk",
-        "kbbbbbbbbbbbbbbbbbbbbbbk",
-        ".kbbbbbbbbbbbbbbbbbbbbk.",
-        ".kdbbbbbbbbbbbbbbbbbbbk.",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "..kbbbbbbwwwwwwbbbbbbk..",
-        "...kbbbbbwwwwwwbbbbbk...",
-        "...kbbkwwkbbbbkwwkbbk...",
-        "...kbbkkkkbbbbkkkkbbk...",
-        "........................",
-        "........................"
-      ]
-    };
-    // 表情叠层：在底稿上再点几个像素（x, y, 调色板键），三只宠物共用同一套脸位
-// 表情叠层：在底稿上再点几个像素（x, y, 调色板键），三只宠物共用同一套脸位
-    // 大眼睛 2×3 带白高光；开心/玩是 ^ ^ 眯眼 + 腮红 + 张嘴笑
-    var 表情像素 = {
-      "普通": [[5,9,"k"],[6,9,"w"],[5,10,"k"],[6,10,"k"],[5,11,"k"],[6,11,"k"],
-              [17,9,"k"],[18,9,"w"],[17,10,"k"],[18,10,"k"],[17,11,"k"],[18,11,"k"],
-              [11,12,"p"],[12,12,"p"],[11,13,"k"],[12,13,"k"]],
-      "开心": [[4,11,"k"],[5,10,"k"],[6,11,"k"],[16,11,"k"],[17,10,"k"],[18,11,"k"],
-               [3,12,"p"],[4,12,"p"],[19,12,"p"],[20,12,"p"],
-               [9,13,"k"],[14,13,"k"],[10,13,"p"],[11,13,"p"],[12,13,"p"],[13,13,"p"],
-               [10,14,"k"],[11,14,"k"],[12,14,"k"],[13,14,"k"]],
-      "难过": [[5,10,"k"],[6,10,"k"],[5,11,"k"],[6,11,"k"],
-               [17,10,"k"],[18,10,"k"],[17,11,"k"],[18,11,"k"],
-               [4,12,"w"],[19,12,"w"],
-               [11,12,"p"],[12,12,"p"],
-               [10,14,"k"],[11,13,"k"],[12,13,"k"],[13,14,"k"]],
-      "睡觉": [[4,10,"k"],[5,10,"k"],[6,10,"k"],[16,10,"k"],[17,10,"k"],[18,10,"k"],
-               [11,12,"p"],[12,12,"p"],[11,13,"k"],[12,13,"k"],
-               [19,0,"k"],[20,0,"k"],[21,0,"k"],[20,1,"k"],[19,2,"k"],[20,2,"k"],[21,2,"k"]],
-      "吃":   [[5,9,"k"],[6,9,"w"],[5,10,"k"],[6,10,"k"],[5,11,"k"],[6,11,"k"],
-               [17,9,"k"],[18,9,"w"],[17,10,"k"],[18,10,"k"],[17,11,"k"],[18,11,"k"],
-               [9,12,"k"],[10,12,"k"],[11,12,"k"],[12,12,"k"],[13,12,"k"],[14,12,"k"],
-               [8,13,"k"],[9,13,"p"],[10,13,"p"],[11,13,"p"],[12,13,"p"],[13,13,"p"],[14,13,"p"],[15,13,"k"],
-               [9,14,"k"],[10,14,"k"],[11,14,"k"],[12,14,"k"],[13,14,"k"],[14,14,"k"]],
-      "嚼":   [[5,9,"k"],[6,9,"w"],[5,10,"k"],[6,10,"k"],[5,11,"k"],[6,11,"k"],
-               [17,9,"k"],[18,9,"w"],[17,10,"k"],[18,10,"k"],[17,11,"k"],[18,11,"k"],
-               [3,12,"p"],[4,12,"p"],[19,12,"p"],[20,12,"p"],
-               [11,12,"p"],[12,12,"p"],[11,13,"k"],[12,13,"k"]],
-      "玩":   [[4,11,"k"],[5,10,"k"],[6,11,"k"],[16,11,"k"],[17,10,"k"],[18,11,"k"],
-               [3,12,"p"],[4,12,"p"],[19,12,"p"],[20,12,"p"],
-               [9,13,"k"],[14,13,"k"],[10,13,"p"],[11,13,"p"],[12,13,"p"],[13,13,"p"],
-               [10,14,"k"],[11,14,"k"],[12,14,"k"],[13,14,"k"]]
-    };
-    // 互动道具（喂食出现食碗，玩耍出现毛线球），画在精灵前面
-// 互动道具（喂食出现食碗，玩耍出现毛线球），画在精灵前面
-    var 道具像素 = {
-      "碗": [[6,19,"w"],[7,19,"w"],[8,19,"w"],[9,19,"w"],
-             [5,20,"k"],[6,20,"y"],[7,20,"y"],[8,20,"y"],[9,20,"y"],[10,20,"y"],[11,20,"y"],[12,20,"k"],
-             [5,21,"k"],[6,21,"y"],[7,21,"y"],[8,21,"y"],[9,21,"y"],[10,21,"y"],[11,21,"y"],[12,21,"k"],
-             [6,22,"k"],[7,22,"k"],[8,22,"k"],[9,22,"k"],[10,22,"k"],[11,22,"k"]],
-      "球": [[16,19,"y"],[17,19,"y"],[18,19,"y"],[19,19,"y"],
-             [15,20,"y"],[16,20,"y"],[17,20,"w"],[18,20,"y"],[19,20,"w"],[20,20,"y"],
-             [15,21,"y"],[16,21,"y"],[17,21,"y"],[18,21,"y"],[19,21,"y"],[20,21,"y"],
-             [16,22,"y"],[17,22,"y"],[18,22,"y"],[19,22,"y"]]
-    };
-
-    function 画像素精灵(canvas, 种类, 表情, 道具) {
-      var 笔 = canvas.getContext("2d");
-      var 色 = 像素调色板[种类] || 像素调色板["猫"];
-      var 底 = 像素底稿[种类] || 像素底稿["猫"];
-      笔.clearRect(0, 0, canvas.width, canvas.height);
-      function 点(x, y, c) { 笔.fillStyle = 色[c] || c; 笔.fillRect(x * 8, y * 8, 8, 8); }
-      底.forEach(function (行, y) {
-        for (var x = 0; x < 行.length; x++) if (行.charAt(x) !== ".") 点(x, y, 行.charAt(x));
-      });
-      (表情像素[表情] || 表情像素["普通"]).forEach(function (点组) { 点(点组[0], 点组[1], 点组[2]); });
-      if (道具 && 道具像素[道具]) 道具像素[道具].forEach(function (点组) { 点(点组[0], 点组[1], 点组[2]); });
-    }
-
-    // 当前该画什么表情：互动中 > 深夜睡觉 > 打卡心情
-    var 互动状态 = { 类型: null, 到: 0 };
-    function 选表情() {
-      if (互动状态.类型 === "吃") return "吃";
-      if (互动状态.类型 === "玩") return "玩";
-      var 时 = new Date().getHours();
-      if (时 >= 23 || 时 < 7) return "睡觉";
-      var 心 = 系统.宠物心情(读(键.每日, 系统.默认每日()), 存档, {}).心情;
-      if (心 === "开心") return "开心";
-      if (心 === "有点想你") return "难过";
-      return "普通";
-    }
-
-    function 亮像素宠物(根) {
-      var 宠 = 存档.宠物;
-      if (!宠) return;
-      var 道具 = 互动状态.类型 === "吃" ? "碗" : 互动状态.类型 === "玩" ? "球" : null;
-      var 情 = 选表情();
-      // 嚼饭动画：张嘴 / 闭嘴两帧来回切
-      if (情 === "吃" && 互动帧) 情 = "嚼";
-      根.querySelectorAll("canvas.像素宠").forEach(function (c) {
-        画像素精灵(c, 宠.种类, 情, 道具);
-      });
-    }
-
-    // 互动动画：吃=嚼饭两帧交替 + 摇摆，玩=蹦跳。到时自动收，恢复正常表情
-    var 互动时钟 = null, 互动帧 = 0;
-    function 互动动画起() {
-      if (互动时钟) { clearInterval(互动时钟); 互动时钟 = null; }
-      互动帧 = 0;
-      var 步 = function () {
-        if (performance.now() >= 互动状态.到) {
-          互动状态.类型 = null;
-          clearInterval(互动时钟); 互动时钟 = null;
-          画宠物();
-          return;
-        }
-        互动帧 ^= 1;
-        // 画宠物会整块重画，摇摆/蹦跳的类记得每次重新挂上
-        var 台 = document.querySelector(".像素舞台");
-        if (台) { 台.classList.add("互动中"); 台.dataset.动 = 互动状态.类型; }
-        亮像素宠物(document);
-      };
-      步();
-      互动时钟 = setInterval(步, 190);
-    }
-
-    function 互动提示(区, 文) {
-      var 回 = 区.querySelector(".宠物回执");
-      if (回) 回.textContent = 文;
-    }
-
-    function 做互动(类, 区) {
-      var 键名 = 类 === "喂食" ? "零食" : "玩具";
-      var 加 = 类 === "喂食" ? 5 : 3;
-      var 物 = (存档.宠物 && 存档.宠物.物品) || {};
-      if (!(物[键名] > 0)) { 互动提示(区, "背包里没有" + 键名 + "了，先在商店买一个～"); return; }
-      合并写(function (存) {
-        if (!存.宠物.物品) 存.宠物.物品 = {};
-        存.宠物.物品[键名] = Math.max(0, (存.宠物.物品[键名] || 0) - 1);
-        存.宠物.亲密度 = Math.min(100, (存.宠物.亲密度 || 0) + 加);
-        if (类 === "喂食") 存.宠物.上次喂食日 = 今天();
-      });
-      互动状态 = { 类型: 类 === "喂食" ? "吃" : "玩", 到: performance.now() + 2600 };
-      画宠物();
-      互动提示(区, 类 === "喂食" ? "吃得好香，亲密度 +5 🍚" : "玩得满地打滚，亲密度 +3 🧶");
-      互动动画起();
-    }
-
-    function 买道具(名, 区) {
-      var 价 = 名 === "零食" ? 5 : 8;
-      if ((存档.金币 || 0) < 价) {
-        互动提示(区, "金币不够啦（还差 " + (价 - (存档.金币 || 0)) + " 币），去打卡赚一点～");
-        return;
-      }
-      合并写(function (存) {
-        存.金币 = (存.金币 || 0) - 价;
-        if (!存.宠物.物品) 存.宠物.物品 = {};
-        存.宠物.物品[名] = (存.宠物.物品[名] || 0) + 1;
-      });
-      画宠物();
-      互动提示(区, "买好啦，背包 +1 " + 名 + " 🛒");
-    }
-
-    function 渲染宠物(区) {
+    function 画宠物() {
+      var 区 = document.getElementById("宠物区");
       var 宠 = 存档.宠物;
 
       if (!宠) {
@@ -1384,7 +958,7 @@ var 像素底稿 = {
           b.addEventListener("click", function () {
             合并写(function (存) {
               存.宠物 = { 种类: b.dataset.领养, 名字: "小" + b.dataset.领养,
-                          亲密度: 0, 领养日: 今天(), 上次喂食日: null, 物品: { 零食: 1, 玩具: 0 } };
+                          亲密度: 0, 领养日: 今天(), 上次喂食日: null };
             });
             画宠物();
           });
@@ -1393,118 +967,20 @@ var 像素底稿 = {
       }
 
       var 心 = 系统.宠物心情(读(键.每日, 系统.默认每日()), 存档, {});
-      var 物 = 宠.物品 || { 零食: 0, 玩具: 0 };
-      var 亲密 = Math.min(100, 心.亲密度 || 0);
       区.innerHTML =
-        '<div class="像素舞台"><canvas class="像素宠" width="192" height="192" aria-label="像素宠物"></canvas></div>' +
-        '<div class="宠物头">' +
-        // 名字输入框用 class 定位（不用 id），避免和历史版本的主卡重复 id 冲突
-        '<input class="宠物名" maxlength="8" value="' + (宠.名字 || "") + '" aria-label="宠物名字">' +
-        '<span class="宠物注" style="margin:0">' + 心.心情 + " · 亲密度 " + 亲密 + "/100</span></div>" +
-        '<div class="亲密条"><i style="width:' + 亲密 + '%"></i></div>' +
-        '<div class="互动排">' +
-        '<button type="button" class="互动钮" data-动="喂食">🍚 喂零食 <small>×' + (物.零食 || 0) + "</small></button>" +
-        '<button type="button" class="互动钮" data-动="玩耍">🧶 玩耍 <small>×' + (物.玩具 || 0) + "</small></button>" +
-        '</div>' +
-        '<div class="宠物商店">' +
-        '<span class="商店题">🛒 商店 · <b>' + (存档.金币 || 0) + " 币</b></span>" +
-        '<div class="商店行">' +
-        '<button type="button" class="互动钮" data-买="零食">🍚 零食 5 币</button>' +
-        '<button type="button" class="互动钮" data-买="玩具">🧶 毛线球 8 币</button>' +
-        "</div></div>" +
-        '<p class="宠物回执"></p>' +
+        '<div class="宠物头"><span class="宠物头像">' + (宠物款[宠.种类] || "🐾") + "</span>" +
+        '<input class="宠物名" id="宠物名" maxlength="8" value="' + (宠.名字 || "") + '" aria-label="宠物名字">' +
+        '<span class="宠物注" style="margin:0">' + 心.心情 + " · 亲密度 " + 心.亲密度 + "</span></div>" +
         '<p class="宠物注">' + 宠.种类 + " · 领养于 " + (宠.领养日 || "—") +
-        "。喂零食 +5 亲密度，玩耍 +3，封顶 100。名字最多 8 个字，改完点一下空白处就存好。</p>";
+        "。名字最多 8 个字，改完点一下空白处就存好。</p>";
 
-      亮像素宠物(区);
-
-      var 输入 = 区.querySelector(".宠物名");
+      var 输入 = document.getElementById("宠物名");
       输入.addEventListener("change", function () {
         var 新 = (输入.value || "").trim().slice(0, 8);
         if (!新) { 输入.value = 宠.名字; return; }
         合并写(function (存) { if (存.宠物) 存.宠物.名字 = 新; });
-        画宠物();
-      });
-      区.querySelectorAll("[data-动]").forEach(function (b) {
-        b.addEventListener("click", function () { 做互动(b.dataset.动, 区); });
-      });
-      区.querySelectorAll("[data-买]").forEach(function (b) {
-        b.addEventListener("click", function () { 买道具(b.dataset.买, 区); });
       });
     }
-
-    // 宠物入口都在桌面「我的伙伴」应用窗里；窗口开着才渲染
-    function 画宠物() {
-      if (当前抽屉 !== "宠物") return;
-      渲染宠物(document.getElementById("抽屉宠物"));
-    }
-
-    // ---------- 桌面 app + 应用窗 ----------
-    // 右边是手机桌面：app 图标摆在壁纸上，点一下像开 app 一样弹出应用窗，
-    // 再点一下（或点桌面壁纸、别处）回到桌面。任务/换装/宠物都是活数据，能直接在窗里操作。
-    var 当前抽屉 = null;
-    var 面板表 = {
-      "任务": { 标题: "今日任务", 容器: "抽屉任务面板" },
-      "换装": { 标题: "换装间", 容器: "抽屉换装面板" },
-      "宠物": { 标题: "我的伙伴", 容器: "抽屉宠物面板" },
-      "存档": { 标题: "存档柜", 容器: "抽屉存档面板" }
-    };
-    function 画存档概览() {
-      var 级 = 系统.由经验算等级(存档.经验 || 0);
-      var 宠 = 存档.宠物;
-      document.getElementById("抽屉存档").innerHTML =
-        '<div class="存档概览">' +
-        '<div><span>等级</span><b>Lv.' + 级.等级 + '</b></div>' +
-        '<div><span>金币</span><b>' + (存档.金币 || 0) + ' 币</b></div>' +
-        '<div><span>经验</span><b>' + (存档.经验 || 0) + '</b></div>' +
-        '<div><span>伙伴</span><b>' + (宠 ? (宠物款[宠.种类] || "🐾") + " " + (宠.名字 || "") : "未领养") + '</b></div>' +
-        '<div><span>改色</span><b>' + Object.keys(染色).length + ' 处</b></div>' +
-        '<div><span>领养日</span><b>' + (宠 && 宠.领养日 ? 宠.领养日 : "—") + '</b></div>' +
-        '</div>' +
-        '<p class="宠物注" style="margin-bottom:0">下面的文本框可以导出 / 导入备份。存档只在这台电脑的浏览器里。</p>';
-    }
-    function 开抽屉(名) {
-      当前抽屉 = 名;
-      var 窗 = document.getElementById("应用窗");
-      document.getElementById("应用标题").textContent = 面板表[名].标题;
-      Object.keys(面板表).forEach(function (k) {
-        document.getElementById(面板表[k].容器).hidden = (k !== 名);
-      });
-      if (名 === "任务" && window.养成反馈) 养成反馈.画任务区(document.getElementById("抽屉任务"));
-      if (名 === "换装") 画换装();
-      if (名 === "宠物") 画宠物();
-      if (名 === "存档") 画存档概览();
-      窗.dataset.开 = "1";
-    }
-    function 关抽屉() {
-      当前抽屉 = null;
-      document.getElementById("应用窗").dataset.开 = "0";
-    }
-    document.querySelectorAll(".应用图标[data-面板]").forEach(function (b) {
-      b.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var 名 = b.dataset.面板;
-        if (当前抽屉 === 名) 关抽屉(); else 开抽屉(名);
-      });
-    });
-    document.getElementById("应用关按钮").addEventListener("click", function (e) {
-      e.stopPropagation(); 关抽屉();
-    });
-    // 点到应用窗以外（壁纸、手机壳、页面其他地方）就回到桌面。
-    // 注意：窗内按钮点了常会重渲染面板（喂食/买道具/打卡/换色），
-    // 重渲染会把点中的按钮从 DOM 摘下来；click 冒泡到这一层时
-    // e.target.closest(".应用窗") 因父子链断开而失灵，窗口会被误关。
-    // 所以先在 pointerdown 时记一笔「这次操作是不是从窗里按下的」。
-    var 按在窗内 = false;
-    document.addEventListener("pointerdown", function (e) {
-      按在窗内 = !!(e.target.closest && e.target.closest(".应用窗"));
-    }, true);
-    document.addEventListener("click", function (e) {
-      if (当前抽屉 === null) return;
-      if (按在窗内) return;
-      if (e.target.closest(".应用窗") || e.target.closest(".应用图标")) return;
-      关抽屉();
-    });
 
     // ---------- 存档导出 / 导入 ----------
     function 导出() {
@@ -1539,6 +1015,119 @@ var 像素底稿 = {
       setTimeout(function () { location.reload(); }, 400);
     }
 
+    // ---------- 2D 视图（像素房间） ----------
+    // 3D 是手写 WebGL 的真房间，2D 是同一间屋子的像素版，两边只切显示、不重载模型。
+    // 摆位写在 1024×530 的固定画布上（与房间底图同尺寸），整块再按舞台等比缩放，
+    // 这样窗口一变，家具和地板线仍然对得上（用百分比就会漂）。
+    // 房间底图 1024×530：墙面到 y≈356（踢脚线），地面从 y≈388 到底。
+    // 图标已裁到内容框，所以「高」就是画面里的实际高度，不用再猜透明边；
+    // 每件都用 中（中线 x）+ 底（离画面底边）定位，靠后的站得高、靠前的站得低。
+    var 二维陈设 = [
+      { 图: "家具-地毯", 宽: 260, 中: 512, 底: 20, 层: 1 },
+      { 图: "家具-书架", 高: 215, 中: 790, 底: 105, 层: 2 },
+      { 图: "家具-落地灯", 高: 185, 中: 150, 底: 70, 层: 2 },
+      { 图: "家具-木桌", 高: 100, 中: 330, 底: 58, 层: 3 },
+      { 图: "家具-小沙发", 高: 105, 中: 660, 底: 42, 层: 3 },
+      { 图: "家具-绿植", 高: 120, 中: 905, 底: 16, 层: 3 }
+    ];
+
+    function 画二维() {
+      var 框 = document.getElementById("小窝2D框");
+      if (!框 || 框.dataset.好) return;
+      二维陈设.slice().sort(function (a, b) { return a.层 - b.层; }).forEach(function (件) {
+        var 图 = document.createElement("img");
+        图.className = "小窝2D件";
+        图.src = "数据/家具图标/" + 件.图 + ".png";
+        图.alt = "";
+        图.style.zIndex = 件.层;
+        图.style.left = 件.中 + "px";
+        图.style.bottom = 件.底 + "px";
+        if (件.宽) 图.style.width = 件.宽 + "px";
+        if (件.高) 图.style.height = 件.高 + "px";
+        框.appendChild(图);
+      });
+      var 人 = document.createElement("div");
+      人.className = "小窝2D人";
+      人.id = "小窝2D人";
+      框.appendChild(人);
+      刷小人();
+      框.dataset.好 = "1";
+    }
+
+    // ---------- 2D 小人：和 3D 玩偶共用一份形象数据 ----------
+    // 存档.形象 里是 11 个部件 id，染色是 上衣/裤子/鞋 三个颜色；
+    // 这里直接拿 数据/装扮.js 的 SVG 图层拼人，所以换装配色一变，2D 也跟着变。
+    var 小人顺序 = [
+      ["脸型", null], ["眉", null], ["眼", null], ["嘴", null], ["腮红", null],
+      ["发型", null], ["裤子", "裤子"], ["鞋", "鞋"], ["上衣", "上衣"], ["配饰", null]
+    ];
+
+    function 取装扮件(分类, id) {
+      var 表 = (window.装扮数据 || {})[分类] || [];
+      for (var i = 0; i < 表.length; i++) if (表[i].id === id) return 表[i];
+      return null;
+    }
+
+    // 只改实心填充：fill='none' 的是描边线，涂上去会把整块区域涂死
+    function 套色(图层, 色) {
+      return 色 ? String(图层).replace(/fill='(?!none)[^']*'/g, "fill='" + 色 + "'") : 图层;
+    }
+
+    function 刷小人() {
+      var 盒 = document.getElementById("小窝2D人");
+      if (!盒 || !window.装扮数据) return;
+      var 形 = (存档 && 存档.形象) || {};
+      var 肤 = 取装扮件("肤色", 形.肤色);
+      var 图 = 小人顺序.map(function (项) {
+        var 件 = 取装扮件(项[0], 形[项[0]]);
+        return 件 ? 套色(件.图层 || "", 项[1] ? 染色[项[1]] : null) : "";
+      }).join("");
+      // 先画成 SVG，再按 100×160 重采样到画布：矢量细节留在小尺寸上，放大后就是像素块
+      var 串 = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" width="200" height="320">' +
+        '<style>.肤色{fill:' + ((肤 && 肤.色值) || "#F5DCC4") + '}</style>' + 图 + "</svg>";
+      var 源 = new Image();
+      源.onload = function () {
+        var 布 = document.createElement("canvas");
+        布.width = 100;
+        布.height = 160;
+        var 笔 = 布.getContext("2d");
+        笔.imageSmoothingEnabled = false;
+        笔.drawImage(源, 0, 0, 100, 160);
+        盒.innerHTML = "";
+        盒.appendChild(布);
+      };
+      源.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(串);
+    }
+    window.小窝2D刷人 = 刷小人;
+
+    function 缩放二维() {
+      var 舞台 = document.getElementById("舞台"), 框 = document.getElementById("小窝2D框");
+      if (!舞台 || !框) return;
+      // 等比放大到把舞台填满，多出来的部分由 .小窝2D 的 overflow 裁掉
+      var s = Math.max(舞台.clientWidth / 1024, 舞台.clientHeight / 530);
+      框.style.transform = "translate(-50%, -50%) scale(" + s.toFixed(4) + ")";
+    }
+
+    var 当前视图 = "3D";
+    function 切视图(视图) {
+      var 舞台 = document.getElementById("舞台"), 层 = document.getElementById("小窝2D"),
+          钮 = document.getElementById("视图按钮");
+      if (!舞台 || !层 || !钮) return;
+      当前视图 = 视图 === "2D" ? "2D" : "3D";
+      if (当前视图 === "2D") { 画二维(); 刷小人(); 缩放二维(); }
+      舞台.dataset.视图 = 当前视图;
+      层.dataset.显 = 当前视图 === "2D" ? "1" : "0";
+      层.setAttribute("aria-hidden", 当前视图 === "2D" ? "false" : "true");
+      钮.textContent = 当前视图 === "2D" ? "看 3D" : "看 2D";
+    }
+
+    document.getElementById("视图按钮").addEventListener("click", function () {
+      切视图(当前视图 === "2D" ? "3D" : "2D");
+    });
+    window.addEventListener("resize", function () {
+      if (当前视图 === "2D") 缩放二维();
+    });
+
     // ---------- 模型懒加载 ----------
     var 遮罩 = document.getElementById("遮罩"), 进度条 = document.getElementById("进度条");
     function 进度(文字, 百分比) {
@@ -1555,8 +1144,12 @@ var 像素底稿 = {
     };
     window.小窝失败 = function (原因) {
       if (原因 === "NO_WEBGL2") {
-        遮罩.innerHTML = '<p class="小窝失败">这台电脑的浏览器没开 WebGL2，小窝暂时显示不了。<br>' +
-          '换成新版 Chrome 或 Edge 再打开就好，打卡和换装数据都不受影响。</p>';
+        // 没 WebGL2 不等于没小窝：2D 视图是纯图片，照样能看，直接切过去并把 3D 入口锁掉
+        切视图("2D");
+        var 钮 = document.getElementById("视图按钮");
+        if (钮) { 钮.disabled = true; 钮.textContent = "此机只支持 2D"; }
+        遮罩.innerHTML = '<p class="小窝失败">这台电脑的浏览器没开 WebGL2，3D 房间显示不了，' +
+          '已经换成 2D 像素小窝。<br>打卡、换装、宠物数据都不受影响。</p>';
       } else {
         遮罩.innerHTML = '<p class="小窝失败">小窝没能加载出来：' + 原因 + '<br>' +
           '打卡、换装、宠物都还能正常用，刷新一次再试试。</p>';
@@ -1598,31 +1191,19 @@ var 像素底稿 = {
     document.getElementById("复位按钮").addEventListener("click", function () {
       if (window.小窝操作) 小窝操作.复位();
     });
-    document.getElementById("拉近按钮").addEventListener("click", function () {
-      if (window.小窝操作) 小窝操作.缩放(-0.7);
-    });
-    document.getElementById("拉远按钮").addEventListener("click", function () {
-      if (window.小窝操作) 小窝操作.缩放(0.7);
-    });
     document.getElementById("导出按钮").addEventListener("click", 导出);
     document.getElementById("导入按钮").addEventListener("click", 导入);
 
     刷新顶栏();
-    // 换装 / 宠物 / 存档都已收进桌面 app，打开对应应用窗时才渲染
-    // 桌面/手机壳的时钟和日期，跟真手机一样走着
-    var 小窝时钟 = document.getElementById("小窝时钟");
-    var 桌面时钟 = document.getElementById("桌面时钟");
-    var 桌面日期 = document.getElementById("桌面日期");
-    function 刷时钟() {
+    画换装();
+    画宠物();
+    // 手机小部件的状态栏日期（今日任务内容由 养成反馈.js 填）
+    var 手机日期 = document.getElementById("手机日期");
+    if (手机日期) {
       var d = new Date();
-      var 时分 = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
-      if (小窝时钟) 小窝时钟.textContent = 时分;
-      if (桌面时钟) 桌面时钟.textContent = 时分;
-      if (桌面日期) 桌面日期.textContent =
-        (d.getMonth() + 1) + "月" + d.getDate() + "日 周" + "日一二三四五六"[d.getDay()];
+      手机日期.textContent = ("0" + (d.getMonth() + 1)).slice(-2) + "/" +
+        ("0" + d.getDate()).slice(-2) + " 周" + "日一二三四五六"[d.getDay()];
     }
-    刷时钟();
-    setInterval(刷时钟, 20000);
     开始加载();
   })();
   </script>
